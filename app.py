@@ -7,6 +7,10 @@ import os
 
 app = Flask(__name__)
 app.secret_key = "clave_secreta_admin_box_2025"
+app.config['SESSION_COOKIE_DOMAIN'] = None
+app.config['SESSION_COOKIE_PATH'] = '/'
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 CORS(app)
 
 # ============================================
@@ -247,8 +251,9 @@ def cliente_login_post():
         for registro in registros:
             if registro.get('email') == email:
                 if registro.get('activo') != 'TRUE':
-                    return jsonify({"error": "Usuario inactivo. Contacta al administrador."}), 401
+                    return jsonify({"error": "Usuario inactivo"}), 401
                 
+                session.permanent = True
                 session['cliente_email'] = email
                 session['cliente_id'] = registro.get('id')
                 return jsonify({"mensaje": f"Bienvenido {registro.get('nombre')}"})
