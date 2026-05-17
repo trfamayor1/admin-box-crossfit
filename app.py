@@ -343,23 +343,16 @@ def cliente_obtener_perfil():
         return jsonify({"error": str(e)}), 500
 
 # ============================================
-# API CLIENTE - CLASES (GET con email por URL)
+# API CLIENTE - CLASES (PÚBLICA - SIN AUTENTICACIÓN)
 # ============================================
 @app.route('/cliente/clases', methods=['GET'])
 def cliente_obtener_clases():
-    # Obtener email de la URL (sin depender de sesión)
-    email = request.args.get('email')
-    
-    # Si no hay email en la URL, devolver error claro
-    if not email:
-        return jsonify({"error": "Se requiere email en la URL"}), 400
-    
+    # Esta ruta es completamente pública - no requiere autenticación
     try:
         sheet = get_sheet("clases")
         registros = sheet.get_all_records()
-        # Mostrar solo clases con cupos disponibles
-        clases_disponibles = [c for c in registros if c.get('cupos_maximos', 0) > c.get('cupos_ocupados', 0)]
-        return jsonify(clases_disponibles)
+        # Devolver todas las clases sin filtrar (para depuración)
+        return jsonify(registros)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
