@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Mis Reservas - Mi Box</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        *{ margin:0; padding:0; box-sizing:border-box; }
+        body{ background:#111; color:white; font-family:Arial; padding:20px; }
+        .header{ display:flex; justify-content:space-between; align-items:center; margin-bottom:30px; flex-wrap:wrap; gap:10px; }
+        button{ background:#00aa55; color:white; border:none; padding:10px 20px; border-radius:10px; cursor:pointer; }
+        .btn-salir{ background:#ff4d00; }
+        .card{ background:#1e1e1e; padding:20px; border-radius:15px; margin-bottom:15px; }
+        .clase-fecha{ color:#ff4d00; font-size:18px; font-weight:bold; }
+        .clase-hora{ font-size:24px; margin:10px 0; }
+        .btn-cancelar{ background:#ff4444; padding:10px 20px; margin-top:10px; }
+        nav{ display:flex; gap:15px; margin-bottom:20px; flex-wrap:wrap; }
+        nav a{ color:white; text-decoration:none; padding:10px; border-radius:10px; background:#333; }
+        nav a:hover{ background:#ff4d00; }
+        .error{ color:#ff6666; margin-top:15px; text-align:center; }
+    </style>
+</head>
+<body>
+<div class="header">
+    <h2>📋 Mis Reservas</h2>
+    <button class="btn-salir" onclick="cerrarSesion()">Salir</button>
+</div>
+
+<nav>
+    <a href="/cliente/perfil">Mi Perfil</a>
+    <a href="/cliente/clases">Clases</a>
+    <a href="/cliente/mis-reservas">Mis Reservas</a>
+</nav>
+
+<div id="reservasContainer"></div>
+<p id="msg" class="error"></p>
+
+<script>
+const clienteEmail = localStorage.getItem('cliente_email');
+if (!clienteEmail) {
+    window.location.href = '/cliente/login';
+}
+
+async function cargarReservas() {
+    try {
+        const response = await fetch('/cliente/mis-reservas', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: clienteEmail })
+        });
+        
+        const reservas = await response.json();
+        const container = document.getElementById('reservasContainer');
+        container.innerHTML = '';
+        
+        if (reservas.length === 0) {
+            container.innerHTML = '<div class="card"><p>No tienes reservas activas.</p></div>';
+            return;
+        }
+        
+        for (const r of reservas) {
+            container.innerHTML += `
+                <div class="card">
+                    <div class="clase-fecha">📅 ${r.fecha}</div>
+                    <div class="clase-hora">⏰ ${r.hora}</div>
+                    <button class="btn-cancelar" onclick="cancelarReserva(${r.reserva_id}, ${r.clase_id})">❌ Cancelar reserva</button>
+                </div>
+            `;
+        }
+    } catch (error) {
+        document.getElementById('msg').innerHTML = '❌ Error al cargar reservas';
+    }
+}
+
+async function cancelarReserva(reservaId, claseId) {
+    if (!confirm('¿Cancelar esta reserva?')) return;
+    
+    try {
+        const response = await fetch('/cliente/cancelar-reserva', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                email: clienteEmail,
+                reserva_id: reservaId,
+                clase_id: claseId
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            document.getElementById('msg').innerHTML = `✅ ${data.mensaje}`;
+            cargarReservas();
+        } else {
+            document.getElementById('msg').innerHTML = `❌ ${data.error}`;
+        }
+    } catch (error) {
+        document.getElementById('msg').innerHTML = '❌ Error de conexión';
+    }
+}
+
+function cerrarSesion() {
+    localStorage.removeItem('cliente_email');
+    window.location.href = '/cliente/login';
+}
+
+cargarReservas();
+</script>
+</body>
+</html>

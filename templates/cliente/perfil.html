@@ -1,56 +1,93 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Mi Perfil</title>
+    <title>Mi Perfil - Mi Box</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
         *{ margin:0; padding:0; box-sizing:border-box; }
         body{ background:#111; color:white; font-family:Arial; padding:20px; }
-        .card{ background:#1e1e1e; padding:30px; border-radius:25px; max-width:400px; margin:0 auto; }
-        button{ background:#ff4d00; color:white; padding:14px; border:none; border-radius:12px; margin-top:20px; width:100%; cursor:pointer; }
-        .error{ color:#ff6666; margin-top:15px; text-align:center; }
+        .header{ display:flex; justify-content:space-between; align-items:center; margin-bottom:30px; flex-wrap:wrap; gap:10px; }
+        button{ background:#00aa55; color:white; border:none; padding:10px 20px; border-radius:10px; cursor:pointer; }
+        .btn-salir{ background:#ff4d00; }
+        .card{ background:#1e1e1e; padding:30px; border-radius:25px; max-width:450px; margin:0 auto; }
         .info{ margin:20px 0; line-height:1.8; }
+        .error{ color:#ff6666; margin-top:15px; text-align:center; }
         h2{ text-align:center; margin-bottom:20px; }
+        nav{ display:flex; gap:15px; margin-bottom:20px; flex-wrap:wrap; justify-content:center; }
+        nav a{ color:white; text-decoration:none; padding:10px; border-radius:10px; background:#333; }
+        nav a:hover{ background:#ff4d00; }
+        .campo{ margin:15px 0; padding:10px; background:#2a2a2a; border-radius:10px; }
+        .campo-label{ color:#ff4d00; font-weight:bold; margin-bottom:5px; }
+        .campo-valor{ font-size:16px; }
     </style>
 </head>
 <body>
-<div class="card">
+<div class="header">
     <h2>🏋️ Mi Perfil</h2>
+    <button class="btn-salir" onclick="cerrarSesion()">Salir</button>
+</div>
+
+<nav>
+    <a href="/cliente/perfil">Mi Perfil</a>
+    <a href="/cliente/clases">Clases</a>
+    <a href="/cliente/mis-reservas">Mis Reservas</a>
+</nav>
+
+<div class="card">
     <div id="info" class="info">Cargando...</div>
-    <button onclick="cerrarSesion()">Cerrar Sesión</button>
     <p id="errorMsg" class="error"></p>
 </div>
 
 <script>
+// Verificar que el cliente está logueado
+const clienteEmail = localStorage.getItem('cliente_email');
+if (!clienteEmail) {
+    window.location.href = '/cliente/login';
+}
+
 async function cargarPerfil() {
     const infoDiv = document.getElementById('info');
     const errorMsg = document.getElementById('errorMsg');
-    
-    // Obtener email guardado
-    const email = localStorage.getItem('cliente_email');
-    
-    if (!email) {
-        window.location.href = '/cliente/login';
-        return;
-    }
     
     try {
         const response = await fetch('/cliente/perfil', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: email })
+            body: JSON.stringify({ email: clienteEmail })
         });
         
         const data = await response.json();
         
         if (response.ok) {
             infoDiv.innerHTML = `
-                <strong>Nombre:</strong> ${data.nombre || 'No registrado'}<br>
-                <strong>Email:</strong> ${data.email || 'No registrado'}<br>
-                <strong>Celular:</strong> ${data.celular || 'No registrado'}<br>
-                <strong>EPS:</strong> ${data.eps || 'No registrado'}<br>
-                <strong>Membresía ID:</strong> ${data.membresia_id || 'No asignada'}<br>
-                <strong>Vencimiento:</strong> ${data.fecha_vencimiento || 'No registrado'}
+                <div class="campo">
+                    <div class="campo-label">🏷️ Nombre</div>
+                    <div class="campo-valor">${data.nombre || 'No registrado'}</div>
+                </div>
+                <div class="campo">
+                    <div class="campo-label">📧 Email</div>
+                    <div class="campo-valor">${data.email || 'No registrado'}</div>
+                </div>
+                <div class="campo">
+                    <div class="campo-label">📱 Celular</div>
+                    <div class="campo-valor">${data.celular || 'No registrado'}</div>
+                </div>
+                <div class="campo">
+                    <div class="campo-label">🏥 EPS</div>
+                    <div class="campo-valor">${data.eps || 'No registrado'}</div>
+                </div>
+                <div class="campo">
+                    <div class="campo-label">💳 Membresía</div>
+                    <div class="campo-valor">${data.membresia_nombre || data.membresia_id || 'No asignada'}</div>
+                </div>
+                <div class="campo">
+                    <div class="campo-label">📅 Vencimiento</div>
+                    <div class="campo-valor">${data.fecha_vencimiento || 'No registrado'}</div>
+                </div>
+                <div class="campo">
+                    <div class="campo-label">🔓 Estado</div>
+                    <div class="campo-valor">${data.activo == 'TRUE' ? '✅ Activo' : '❌ Inactivo'}</div>
+                </div>
             `;
             errorMsg.innerHTML = '';
         } else {
@@ -59,7 +96,8 @@ async function cargarPerfil() {
         }
     } catch (error) {
         infoDiv.innerHTML = '';
-        errorMsg.innerHTML = '❌ Error de conexión';
+        errorMsg.innerHTML = '❌ Error de conexión con el servidor';
+        console.error('Error:', error);
     }
 }
 
