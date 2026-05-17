@@ -13,10 +13,11 @@
         .clase-fecha{ color:#ff4d00; font-size:18px; font-weight:bold; }
         .clase-hora{ font-size:24px; margin:10px 0; }
         .btn-cancelar{ background:#ff4444; padding:10px 20px; margin-top:10px; }
-        nav{ display:flex; gap:15px; margin-bottom:20px; flex-wrap:wrap; }
+        nav{ display:flex; gap:15px; margin-bottom:20px; flex-wrap:wrap; justify-content:center; }
         nav a{ color:white; text-decoration:none; padding:10px; border-radius:10px; background:#333; }
         nav a:hover{ background:#ff4d00; }
         .error{ color:#ff6666; margin-top:15px; text-align:center; }
+        .exito{ color:#66ff66; margin-top:15px; text-align:center; }
     </style>
 </head>
 <body>
@@ -41,6 +42,9 @@ if (!clienteEmail) {
 }
 
 async function cargarReservas() {
+    const container = document.getElementById('reservasContainer');
+    const msg = document.getElementById('msg');
+    
     try {
         const response = await fetch('/cliente/mis-reservas', {
             method: 'POST',
@@ -49,10 +53,10 @@ async function cargarReservas() {
         });
         
         const reservas = await response.json();
-        const container = document.getElementById('reservasContainer');
+        
         container.innerHTML = '';
         
-        if (reservas.length === 0) {
+        if (!Array.isArray(reservas) || reservas.length === 0) {
             container.innerHTML = '<div class="card"><p>No tienes reservas activas.</p></div>';
             return;
         }
@@ -67,12 +71,16 @@ async function cargarReservas() {
             `;
         }
     } catch (error) {
-        document.getElementById('msg').innerHTML = '❌ Error al cargar reservas';
+        console.error('Error:', error);
+        msg.innerHTML = '❌ Error al cargar reservas';
+        msg.className = 'error';
     }
 }
 
 async function cancelarReserva(reservaId, claseId) {
     if (!confirm('¿Cancelar esta reserva?')) return;
+    
+    const msg = document.getElementById('msg');
     
     try {
         const response = await fetch('/cliente/cancelar-reserva', {
@@ -88,13 +96,16 @@ async function cancelarReserva(reservaId, claseId) {
         const data = await response.json();
         
         if (response.ok) {
-            document.getElementById('msg').innerHTML = `✅ ${data.mensaje}`;
+            msg.innerHTML = `✅ ${data.mensaje}`;
+            msg.className = 'exito';
             cargarReservas();
         } else {
-            document.getElementById('msg').innerHTML = `❌ ${data.error}`;
+            msg.innerHTML = `❌ ${data.error}`;
+            msg.className = 'error';
         }
     } catch (error) {
-        document.getElementById('msg').innerHTML = '❌ Error de conexión';
+        msg.innerHTML = '❌ Error de conexión';
+        msg.className = 'error';
     }
 }
 

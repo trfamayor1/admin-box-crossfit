@@ -17,7 +17,7 @@
         .btn-reservar:disabled{ background:#555; cursor:not-allowed; }
         .error{ color:#ff6666; margin-top:15px; text-align:center; }
         .exito{ color:#66ff66; margin-top:15px; text-align:center; }
-        nav{ display:flex; gap:15px; margin-bottom:20px; flex-wrap:wrap; }
+        nav{ display:flex; gap:15px; margin-bottom:20px; flex-wrap:wrap; justify-content:center; }
         nav a{ color:white; text-decoration:none; padding:10px; border-radius:10px; background:#333; }
         nav a:hover{ background:#ff4d00; }
     </style>
@@ -38,26 +38,33 @@
 <p id="msg" class="error"></p>
 
 <script>
-// Verificar que el cliente está logueado
 const clienteEmail = localStorage.getItem('cliente_email');
 if (!clienteEmail) {
     window.location.href = '/cliente/login';
 }
 
 async function cargarClases() {
+    const container = document.getElementById('clasesContainer');
+    const msg = document.getElementById('msg');
+    
     try {
-        const response = await fetch('/cliente/clases');
-        const clases = await response.json();
+        const response = await fetch('/cliente/clases?email=' + encodeURIComponent(clienteEmail));
+        const data = await response.json();
         
-        const container = document.getElementById('clasesContainer');
-        container.innerHTML = '';
-        
-        if (clases.length === 0) {
-            container.innerHTML = '<div class="card"><p>No hay clases disponibles por ahora.</p></div>';
+        if (!response.ok) {
+            msg.innerHTML = '❌ ' + (data.error || 'Error al cargar clases');
+            msg.className = 'error';
             return;
         }
         
-        for (const clase of clases) {
+        container.innerHTML = '';
+        
+        if (!Array.isArray(data) || data.length === 0) {
+            container.innerHTML = '<div class="card"><p>No hay clases disponibles por ahora. El administrador creará clases pronto.</p></div>';
+            return;
+        }
+        
+        for (const clase of data) {
             const disponibles = clase.cupos_maximos - (clase.cupos_ocupados || 0);
             const yaReservada = await verificarReserva(clase.id);
             
@@ -75,7 +82,9 @@ async function cargarClases() {
             `;
         }
     } catch (error) {
-        document.getElementById('msg').innerHTML = '❌ Error al cargar clases';
+        console.error('Error:', error);
+        msg.innerHTML = '❌ Error de conexión al cargar clases';
+        msg.className = 'error';
     }
 }
 
@@ -99,6 +108,8 @@ async function verificarReserva(claseId) {
 async function reservarClase(claseId) {
     if (!confirm('¿Reservar esta clase?')) return;
     
+    const msg = document.getElementById('msg');
+    
     try {
         const response = await fetch('/cliente/reservar', {
             method: 'POST',
@@ -112,16 +123,16 @@ async function reservarClase(claseId) {
         const data = await response.json();
         
         if (response.ok) {
-            document.getElementById('msg').innerHTML = `✅ ${data.mensaje}`;
-            document.getElementById('msg').className = 'exito';
+            msg.innerHTML = `✅ ${data.mensaje}`;
+            msg.className = 'exito';
             cargarClases();
         } else {
-            document.getElementById('msg').innerHTML = `❌ ${data.error}`;
-            document.getElementById('msg').className = 'error';
+            msg.innerHTML = `❌ ${data.error}`;
+            msg.className = 'error';
         }
     } catch (error) {
-        document.getElementById('msg').innerHTML = '❌ Error de conexión';
-        document.getElementById('msg').className = 'error';
+        msg.innerHTML = '❌ Error de conexión';
+        msg.className = 'error';
     }
 }
 
