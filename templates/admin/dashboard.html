@@ -2,7 +2,7 @@
 <html>
 <head>
     <title>Dashboard - Admin Box</title>
-    <link rel="manifest" href="/manifest.json">
+    <link rel="manifest" href="/ADMIN/manifest.json">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
@@ -19,6 +19,10 @@
         .modal-content{ background:#1e1e1e; padding:30px; border-radius:20px; width:90%; max-width:450px; }
         .modal-content input, .modal-content select{ width:100%; padding:10px; margin:8px 0; border-radius:8px; border:none; }
         .cerrar{ float:right; cursor:pointer; font-size:24px; }
+        .seccion{ background:#1e1e1e; padding:20px; border-radius:15px; margin-top:30px; }
+        .input-group{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+        .input-group input, .input-group select{ padding:10px; border-radius:8px; border:none; }
+        h3{ margin-bottom:15px; color:#ff4d00; }
     </style>
 </head>
 <body>
@@ -30,6 +34,7 @@
     </div>
 </div>
 
+<!-- Sección Clientes -->
 <h3>📋 Clientes</h3>
 <div style="overflow-x:auto;">
     <table id="tablaClientes">
@@ -40,7 +45,28 @@
     </table>
 </div>
 
-<!-- Modal Crear/Editar Cliente -->
+<!-- Sección Clases -->
+<div class="seccion">
+    <h3>📅 Crear Clase</h3>
+    <div class="input-group">
+        <input type="date" id="clase_fecha" style="padding: 10px; border-radius: 8px;">
+        <input type="time" id="clase_hora" style="padding: 10px; border-radius: 8px;">
+        <input type="number" id="clase_cupos" placeholder="Cupos" style="padding: 10px; border-radius: 8px; width: 100px;">
+        <button onclick="crearClase()" style="background: #ff4d00; padding: 10px 20px;">Crear Clase</button>
+    </div>
+</div>
+
+<div class="seccion">
+    <h3>📋 Clases Programadas</h3>
+    <div style="overflow-x:auto;">
+        <table style="width:100%">
+            <thead><tr><th>Fecha</th><th>Hora</th><th>Cupos</th><th>Reservados</th><th>Disponibles</th></tr></thead>
+            <tbody id="clasesBody"></tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal Cliente -->
 <div id="modalCliente" class="modal">
     <div class="modal-content">
         <span class="cerrar" onclick="cerrarModal()">&times;</span>
@@ -61,35 +87,52 @@
 </div>
 
 <script>
-if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/sw.js');
-}
-
-let clientes = [];
-let membresias = [];
-
-async function verificarSesion() {
+// ============================================
+// VERIFICAR ADMIN AUTORIZADO
+// ============================================
+async function verificarAdmin() {
+    const adminEmail = localStorage.getItem('admin_email');
+    
+    if (!adminEmail) {
+        window.location.href = '/admin/login';
+        return;
+    }
+    
     try {
-        const res = await fetch('/verificar_sesion');
-        if (!res.ok) window.location.href = '/';
-    } catch(e) {
-        window.location.href = '/';
+        const response = await fetch('/admin/verificar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: adminEmail })
+        });
+        
+        if (!response.ok) {
+            localStorage.removeItem('admin_email');
+            window.location.href = '/admin/login';
+        }
+    } catch (error) {
+        window.location.href = '/admin/login';
     }
 }
 
+// ============================================
+// CLIENTES CRUD
+// ============================================
+let clientes = [];
+let membresias = [];
+
 async function cargarClientes() {
-    const res = await fetch('/clientes');
+    const res = await fetch('/admin/clientes');
     clientes = await res.json();
     mostrarClientes();
 }
 
 async function cargarMembresias() {
-    const res = await fetch('/membresias');
+    const res = await fetch('/admin/membresias');
     membresias = await res.json();
     const select = document.getElementById('membresiaId');
     select.innerHTML = '';
     membresias.forEach(m => {
-        select.innerHTML += `<option value="${m.id}">${m.nombre}</option>`;
+        select.innerHTML += `<option value="${m.id}">${m.nombre} (${m.clases_por_mes} clases/mes)</option>`;
     });
 }
 
@@ -97,13 +140,14 @@ function mostrarClientes() {
     const tbody = document.getElementById('clientesBody');
     tbody.innerHTML = '';
     clientes.forEach(c => {
+        const membresia = membresias.find(m => m.id == c.membresia_id);
         tbody.innerHTML += `
             <tr>
                 <td>${c.id}</td>
                 <td>${c.nombre || ''}</td>
                 <td>${c.email || ''}</td>
                 <td>${c.celular || ''}</td>
-                <td>${c.membresia_nombre || buscarMembresiaNombre(c.membresia_id)}</td>
+                <td>${membresia ? membresia.nombre : 'Sin membresía'}</td>
                 <td>${c.fecha_vencimiento || ''}</td>
                 <td>${c.activo == 'TRUE' ? '✅' : '❌'}</td>
                 <td>
@@ -113,11 +157,6 @@ function mostrarClientes() {
             </tr>
         `;
     });
-}
-
-function buscarMembresiaNombre(id) {
-    const m = membresias.find(m => m.id == id);
-    return m ? m.nombre : 'Sin membresía';
 }
 
 function abrirModalCliente() {
@@ -139,7 +178,7 @@ function editarCliente(id) {
     document.getElementById('clienteId').value = cliente.id;
     document.getElementById('nombre').value = cliente.nombre || '';
     document.getElementById('email').value = cliente.email || '';
-   document.getElementById('celular').value = cliente.celular || '';
+    document.getElementById('celular').value = cliente.celular || '';
     document.getElementById('eps').value = cliente.eps || '';
     document.getElementById('membresiaId').value = cliente.membresia_id || '';
     document.getElementById('fechaVencimiento').value = cliente.fecha_vencimiento || '';
@@ -167,13 +206,13 @@ async function guardarCliente() {
     
     let res;
     if (id) {
-        res = await fetch(`/clientes/${id}`, {
+        res = await fetch(`/admin/clientes/${id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(datos)
         });
     } else {
-        res = await fetch('/clientes', {
+        res = await fetch('/admin/clientes', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(datos)
@@ -190,19 +229,77 @@ async function guardarCliente() {
 
 async function eliminarCliente(id) {
     if (confirm('¿Eliminar este cliente?')) {
-        await fetch(`/clientes/${id}`, { method: 'DELETE' });
+        await fetch(`/admin/clientes/${id}`, { method: 'DELETE' });
         cargarClientes();
-    } 
+    }
 }
 
-async function cerrarSesion() {
-    await fetch('/logout', { method: 'POST' });
-    window.location.href = '/';
+// ============================================
+// CLASES
+// ============================================
+async function crearClase() {
+    const fecha = document.getElementById('clase_fecha').value;
+    const hora = document.getElementById('clase_hora').value;
+    const cupos = document.getElementById('clase_cupos').value;
+    
+    if (!fecha || !hora || !cupos) {
+        alert("Completa todos los campos");
+        return;
+    }
+    
+    const res = await fetch('/admin/clases', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fecha, hora, cupos_maximos: parseInt(cupos) })
+    });
+    
+    if (res.ok) {
+        alert("Clase creada");
+        cargarClases();
+        document.getElementById('clase_fecha').value = '';
+        document.getElementById('clase_hora').value = '';
+        document.getElementById('clase_cupos').value = '';
+    } else {
+        alert("Error al crear clase");
+    }
 }
 
-verificarSesion();
-cargarMembresias();
-cargarClientes();
+async function cargarClases() {
+    const res = await fetch('/admin/clases');
+    const clases = await res.json();
+    const tbody = document.getElementById('clasesBody');
+    tbody.innerHTML = '';
+    
+    clases.forEach(c => {
+        const disponibles = c.cupos_maximos - c.cupos_ocupados;
+        tbody.innerHTML += `
+            <tr>
+                <td>${c.fecha}</td>
+                <td>${c.hora}</td>
+                <td>${c.cupos_maximos}</td>
+                <td>${c.cupos_ocupados || 0}</td>
+                <td style="color: ${disponibles > 0 ? '#66ff66' : '#ff6666'}">${disponibles}</td>
+            </tr>
+        `;
+    });
+}
+
+// ============================================
+// CERRAR SESIÓN
+// ============================================
+function cerrarSesion() {
+    localStorage.removeItem('admin_email');
+    window.location.href = '/admin/login';
+}
+
+// ============================================
+// INICIALIZAR
+// ============================================
+verificarAdmin().then(() => {
+    cargarMembresias();
+    cargarClientes();
+    cargarClases();
+});
 </script>
 </body>
 </html>

@@ -93,7 +93,7 @@ def admin_dashboard():
     return render_template('admin/dashboard.html')
 
 # ============================================
-# API ADMINISTRADOR (sin sesiones)
+# API ADMINISTRADOR
 # ============================================
 @app.route('/admin/verificar', methods=['POST'])
 def admin_verificar():
@@ -205,6 +205,38 @@ def admin_obtener_membresias():
         return jsonify({"error": str(e)}), 500
 
 # ============================================
+# API CLASES (Administrador)
+# ============================================
+@app.route('/admin/clases', methods=['GET'])
+def admin_obtener_clases():
+    try:
+        sheet = get_sheet("clases")
+        registros = sheet.get_all_records()
+        return jsonify(registros)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/admin/clases', methods=['POST'])
+def admin_crear_clase():
+    try:
+        data = request.json
+        sheet = get_sheet("clases")
+        registros = sheet.get_all_records()
+        nuevo_id = len(registros) + 1
+        
+        sheet.append_row([
+            nuevo_id,
+            data.get('fecha', ''),
+            data.get('hora', ''),
+            data.get('cupos_maximos', 0),
+            0,  # cupos_ocupados inicial
+            'admin'
+        ])
+        return jsonify({"mensaje": "Clase creada", "id": nuevo_id})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# ============================================
 # RUTAS HTML CLIENTE
 # ============================================
 @app.route('/cliente/login')
@@ -280,6 +312,18 @@ def cliente_obtener_perfil():
                     "activo": registro.get('activo', 'TRUE')
                 })
         return jsonify({"error": "Perfil no encontrado"}), 404
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/cliente/clases', methods=['GET'])
+def cliente_obtener_clases():
+    """Clientes ven las clases disponibles"""
+    try:
+        sheet = get_sheet("clases")
+        registros = sheet.get_all_records()
+        # Solo mostrar clases con cupos disponibles
+        clases_disponibles = [c for c in registros if c.get('cupos_maximos', 0) > c.get('cupos_ocupados', 0)]
+        return jsonify(clases_disponibles)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
