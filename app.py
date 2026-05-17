@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request, send_from_directory, session, render_template
+from flask import Flask, jsonify, request, send_from_directory, render_template
 from flask_cors import CORS
 import gspread
 from google.oauth2.service_account import Credentials
@@ -6,11 +6,6 @@ import json
 import os
 
 app = Flask(__name__)
-app.secret_key = "clave_secreta_admin_box_2025"
-app.config['SESSION_COOKIE_DOMAIN'] = None
-app.config['SESSION_COOKIE_PATH'] = '/'
-app.config['SESSION_COOKIE_HTTPONLY'] = True
-app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 CORS(app)
 
 # ============================================
@@ -95,15 +90,13 @@ def admin_login():
 
 @app.route('/admin/dashboard')
 def admin_dashboard():
-    if 'admin_email' not in session:
-        return render_template('admin/login.html')
     return render_template('admin/dashboard.html')
 
 # ============================================
-# API ADMINISTRADOR
+# API ADMINISTRADOR (sin sesiones)
 # ============================================
-@app.route('/admin/login', methods=['POST'])
-def admin_login_post():
+@app.route('/admin/verificar', methods=['POST'])
+def admin_verificar():
     data = request.json
     email = data.get('email')
     
@@ -113,23 +106,11 @@ def admin_login_post():
         
         for registro in registros:
             if registro.get('email') == email:
-                session['admin_email'] = email
-                return jsonify({"mensaje": "Login exitoso"})
+                return jsonify({"autorizado": True, "mensaje": "Admin autorizado"})
         
-        return jsonify({"error": "Email no autorizado"}), 401
+        return jsonify({"autorizado": False, "error": "Email no autorizado"}), 401
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
-@app.route('/admin/verificar_sesion', methods=['GET'])
-def admin_verificar_sesion():
-    if 'admin_email' in session:
-        return jsonify({"autenticado": True})
-    return jsonify({"autenticado": False}), 401
-
-@app.route('/admin/logout', methods=['POST'])
-def admin_logout():
-    session.pop('admin_email', None)
-    return jsonify({"mensaje": "Sesión cerrada"})
 
 @app.route('/admin/clientes', methods=['GET'])
 def admin_obtener_clientes():
@@ -232,12 +213,10 @@ def cliente_login():
 
 @app.route('/cliente/perfil')
 def cliente_perfil():
-    if 'cliente_email' not in session:
-        return render_template('cliente/login.html')
     return render_template('cliente/perfil.html')
 
 # ============================================
-# API CLIENTE
+# API CLIENTE (sin sesiones, usa email en cada petición)
 # ============================================
 @app.route('/cliente/login', methods=['POST'])
 def cliente_login_post():
@@ -253,26 +232,42 @@ def cliente_login_post():
                 if registro.get('activo') != 'TRUE':
                     return jsonify({"error": "Usuario inactivo"}), 401
                 
-                session.permanent = True
-                session['cliente_email'] = email
-                session['cliente_id'] = registro.get('id')
-                return jsonify({"mensaje": f"Bienvenido {registro.get('nombre')}"})
+                return jsonify({
+                    "mensaje": f"Bienvenido {registro.get('nombre')}",
+                    "email": email,
+                    "nombre": registro.get('nombre')
+                })
         
         return jsonify({"error": "Email no registrado"}), 401
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@app.route('/cliente/perfil', methods=['GET'])
+@app.route('/cliente/perfil', methods=['POST'])
 def cliente_obtener_perfil():
-    if 'cliente_email' not in session:
-        return jsonify({"error": "No autenticado"}), 401
+    data = request.json
+    email = data.get('email')
+    
+    if not email:
+        return jsonify({"error": "Email requerido"}), 400
     
     try:
         sheet = get_sheet("clientes")
         registros = sheet.get_all_records()
         
         for registro in registros:
-            if registro.get('email') == session['cliente_email']:
+            if registro.get('email') == email:
+                # Obtener nombre de membresía
+                membresia_nombre = ""
+                try:
+                    sheet_memb = get_sheet("membresias")
+                    membresias = sheet_memb.get_all_records()
+                    for m in membresias:
+                        if str(m.get('id')) == str(registro.get('membresia_id')):
+                            membresia_nombre = m.get('nombre', '')
+                            break
+                except:
+                    pass
+                
                 return jsonify({
                     "id": registro.get('id'),
                     "nombre": registro.get('nombre', ''),
@@ -280,6 +275,7 @@ def cliente_obtener_perfil():
                     "celular": registro.get('celular', ''),
                     "eps": registro.get('eps', ''),
                     "membresia_id": registro.get('membresia_id', ''),
+                    "membresia_nombre": membresia_nombre,
                     "fecha_vencimiento": registro.get('fecha_vencimiento', ''),
                     "activo": registro.get('activo', 'TRUE')
                 })
@@ -287,16 +283,8 @@ def cliente_obtener_perfil():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@app.route('/cliente/verificar_sesion', methods=['GET'])
-def cliente_verificar_sesion():
-    if 'cliente_email' in session:
-        return jsonify({"autenticado": True})
-    return jsonify({"autenticado": False}), 401
-
 @app.route('/cliente/logout', methods=['POST'])
 def cliente_logout():
-    session.pop('cliente_email', None)
-    session.pop('cliente_id', None)
     return jsonify({"mensaje": "Sesión cerrada"})
 
 # ============================================

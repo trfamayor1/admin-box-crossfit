@@ -10,8 +10,6 @@
         input{ width:100%; padding:14px; margin:15px 0; border-radius:12px; border:none; }
         button{ width:100%; padding:14px; background:#00aa55; color:white; border:none; border-radius:12px; font-weight:bold; cursor:pointer; }
         .error{ color:#ff6666; margin-top:15px; }
-        .success{ color:#66ff66; margin-top:15px; }
-        h2{ margin-bottom:20px; }
     </style>
 </head>
 <body>
@@ -29,12 +27,10 @@ async function login() {
     
     if (!email) {
         msg.innerText = "❌ Ingresa tu email";
-        msg.className = "error";
         return;
     }
     
     msg.innerText = "⏳ Verificando...";
-    msg.className = "";
     
     try {
         const response = await fetch('/cliente/login', {
@@ -46,18 +42,14 @@ async function login() {
         const data = await response.json();
         
         if (response.ok) {
-            msg.innerText = "✅ " + data.mensaje;
-            msg.className = "success";
-            // Redirigir al perfil del cliente
+            // Guardar email en localStorage
+            localStorage.setItem('cliente_email', email);
             window.location.href = '/cliente/perfil';
         } else {
             msg.innerText = "❌ " + data.error;
-            msg.className = "error";
         }
     } catch (error) {
         msg.innerText = "❌ Error de conexión";
-        msg.className = "error";
-        console.error("Error:", error);
     }
 }
 </script>
