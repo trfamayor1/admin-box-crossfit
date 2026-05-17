@@ -229,10 +229,29 @@ def admin_crear_clase():
             data.get('fecha', ''),
             data.get('hora', ''),
             data.get('cupos_maximos', 0),
-            0,  # cupos_ocupados inicial
+            0,
             'admin'
         ])
         return jsonify({"mensaje": "Clase creada", "id": nuevo_id})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/admin/clases/<int:clase_id>', methods=['DELETE'])
+def admin_eliminar_clase(clase_id):
+    try:
+        sheet = get_sheet("clases")
+        registros = sheet.get_all_records()
+        
+        fila_index = None
+        for i, registro in enumerate(registros, start=2):
+            if registro.get('id') == clase_id:
+                fila_index = i
+                break
+        
+        if fila_index:
+            sheet.delete_rows(fila_index)
+            return jsonify({"mensaje": "Clase eliminada"})
+        return jsonify({"error": "Clase no encontrada"}), 404
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -248,7 +267,7 @@ def cliente_perfil():
     return render_template('cliente/perfil.html')
 
 # ============================================
-# API CLIENTE (sin sesiones, usa email en cada petición)
+# API CLIENTE
 # ============================================
 @app.route('/cliente/login', methods=['POST'])
 def cliente_login_post():
@@ -288,7 +307,6 @@ def cliente_obtener_perfil():
         
         for registro in registros:
             if registro.get('email') == email:
-                # Obtener nombre de membresía
                 membresia_nombre = ""
                 try:
                     sheet_memb = get_sheet("membresias")
@@ -317,11 +335,9 @@ def cliente_obtener_perfil():
 
 @app.route('/cliente/clases', methods=['GET'])
 def cliente_obtener_clases():
-    """Clientes ven las clases disponibles"""
     try:
         sheet = get_sheet("clases")
         registros = sheet.get_all_records()
-        # Solo mostrar clases con cupos disponibles
         clases_disponibles = [c for c in registros if c.get('cupos_maximos', 0) > c.get('cupos_ocupados', 0)]
         return jsonify(clases_disponibles)
     except Exception as e:
