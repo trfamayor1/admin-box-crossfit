@@ -6,7 +6,7 @@ import json
 import os
 
 app = Flask(__name__)
-app.secret_key = "clave_secreta_admin_box_2025"  # Cambia esto después
+app.secret_key = "clave_secreta_admin_box_2025"
 CORS(app)
 
 # ============================================
@@ -39,7 +39,7 @@ def get_sheet(nombre_hoja):
     return sheet
 
 # ============================================
-# PÁGINA PRINCIPAL (elige admin o cliente)
+# PÁGINA PRINCIPAL
 # ============================================
 @app.route('/')
 def index():
@@ -53,7 +53,7 @@ def static_files(path):
     return send_from_directory('static', path)
 
 # ============================================
-# RUTAS PARA PWA DEL ADMINISTRADOR
+# PWA ADMINISTRADOR
 # ============================================
 @app.route('/ADMIN/manifest.json')
 def admin_manifest():
@@ -68,7 +68,7 @@ def admin_static(path):
     return send_from_directory('ADMIN/static', path)
 
 # ============================================
-# RUTAS PARA PWA DEL CLIENTE
+# PWA CLIENTE
 # ============================================
 @app.route('/CLIENTE/manifest.json')
 def cliente_manifest():
@@ -83,7 +83,7 @@ def cliente_static(path):
     return send_from_directory('CLIENTE/static', path)
 
 # ============================================
-# RUTAS DE ADMINISTRADOR (HTML)
+# RUTAS HTML ADMINISTRADOR
 # ============================================
 @app.route('/admin/login')
 def admin_login():
@@ -96,7 +96,7 @@ def admin_dashboard():
     return render_template('admin/dashboard.html')
 
 # ============================================
-# API DE ADMINISTRADOR (login, clientes, membresías)
+# API ADMINISTRADOR
 # ============================================
 @app.route('/admin/login', methods=['POST'])
 def admin_login_post():
@@ -220,7 +220,7 @@ def admin_obtener_membresias():
         return jsonify({"error": str(e)}), 500
 
 # ============================================
-# RUTAS DE CLIENTE (HTML)
+# RUTAS HTML CLIENTE
 # ============================================
 @app.route('/cliente/login')
 def cliente_login():
@@ -233,7 +233,7 @@ def cliente_perfil():
     return render_template('cliente/perfil.html')
 
 # ============================================
-# API DE CLIENTE (login, perfil, etc.)
+# API CLIENTE
 # ============================================
 @app.route('/cliente/login', methods=['POST'])
 def cliente_login_post():
@@ -247,11 +247,11 @@ def cliente_login_post():
         for registro in registros:
             if registro.get('email') == email:
                 if registro.get('activo') != 'TRUE':
-                    return jsonify({"error": "Usuario inactivo"}), 401
+                    return jsonify({"error": "Usuario inactivo. Contacta al administrador."}), 401
                 
                 session['cliente_email'] = email
                 session['cliente_id'] = registro.get('id')
-                return jsonify({"mensaje": "Login exitoso", "nombre": registro.get('nombre')})
+                return jsonify({"mensaje": f"Bienvenido {registro.get('nombre')}"})
         
         return jsonify({"error": "Email no registrado"}), 401
     except Exception as e:
@@ -269,13 +269,14 @@ def cliente_obtener_perfil():
         for registro in registros:
             if registro.get('email') == session['cliente_email']:
                 return jsonify({
-                    "nombre": registro.get('nombre'),
-                    "email": registro.get('email'),
-                    "celular": registro.get('celular'),
-                    "eps": registro.get('eps'),
-                    "membresia_id": registro.get('membresia_id'),
-                    "fecha_vencimiento": registro.get('fecha_vencimiento'),
-                    "activo": registro.get('activo')
+                    "id": registro.get('id'),
+                    "nombre": registro.get('nombre', ''),
+                    "email": registro.get('email', ''),
+                    "celular": registro.get('celular', ''),
+                    "eps": registro.get('eps', ''),
+                    "membresia_id": registro.get('membresia_id', ''),
+                    "fecha_vencimiento": registro.get('fecha_vencimiento', ''),
+                    "activo": registro.get('activo', 'TRUE')
                 })
         return jsonify({"error": "Perfil no encontrado"}), 404
     except Exception as e:
@@ -293,5 +294,8 @@ def cliente_logout():
     session.pop('cliente_id', None)
     return jsonify({"mensaje": "Sesión cerrada"})
 
+# ============================================
+# INICIAR SERVIDOR
+# ============================================
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=10000, debug=True)

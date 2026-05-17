@@ -7,39 +7,57 @@
         *{ margin:0; padding:0; box-sizing:border-box; }
         body{ background:#111; color:white; font-family:Arial; padding:20px; }
         .card{ background:#1e1e1e; padding:30px; border-radius:25px; max-width:400px; margin:0 auto; }
-        button{ background:#ff4d00; color:white; padding:14px; border:none; border-radius:12px; margin-top:20px; width:100%; }
+        button{ background:#ff4d00; color:white; padding:14px; border:none; border-radius:12px; margin-top:20px; width:100%; cursor:pointer; }
+        .error{ color:#ff6666; margin-top:15px; text-align:center; }
+        .info{ margin:20px 0; line-height:1.8; }
+        h2{ text-align:center; margin-bottom:20px; }
     </style>
 </head>
 <body>
 <div class="card">
     <h2>🏋️ Mi Perfil</h2>
-    <p id="info">Cargando...</p>
+    <div id="info" class="info">Cargando...</div>
     <button onclick="cerrarSesion()">Cerrar Sesión</button>
+    <p id="errorMsg" class="error"></p>
 </div>
+
 <script>
 async function cargarPerfil() {
+    const infoDiv = document.getElementById('info');
+    const errorMsg = document.getElementById('errorMsg');
+    
     try {
-        const res = await fetch('/cliente/perfil');
-        const data = await res.json();
-        if (res.ok) {
-            document.getElementById('info').innerHTML = `
-                <strong>Nombre:</strong> ${data.nombre}<br>
-                <strong>Email:</strong> ${data.email}<br>
+        const response = await fetch('/cliente/perfil');
+        const data = await response.json();
+        
+        if (response.ok) {
+            infoDiv.innerHTML = `
+                <strong>Nombre:</strong> ${data.nombre || 'No registrado'}<br>
+                <strong>Email:</strong> ${data.email || 'No registrado'}<br>
                 <strong>Celular:</strong> ${data.celular || 'No registrado'}<br>
                 <strong>EPS:</strong> ${data.eps || 'No registrado'}<br>
+                <strong>Membresía:</strong> ${data.membresia_id || 'No asignada'}<br>
                 <strong>Vencimiento:</strong> ${data.fecha_vencimiento || 'No registrado'}
             `;
+            errorMsg.innerHTML = '';
         } else {
-            document.getElementById('info').innerHTML = "❌ Error al cargar perfil";
+            infoDiv.innerHTML = '';
+            errorMsg.innerHTML = '❌ ' + (data.error || 'Error al cargar perfil');
         }
     } catch (error) {
-        document.getElementById('info').innerHTML = "❌ Error de conexión";
+        infoDiv.innerHTML = '';
+        errorMsg.innerHTML = '❌ Error de conexión con el servidor';
+        console.error('Error:', error);
     }
 }
 
 async function cerrarSesion() {
-    await fetch('/cliente/logout', { method: 'POST' });
-    window.location.href = '/cliente/login';
+    try {
+        await fetch('/cliente/logout', { method: 'POST' });
+        window.location.href = '/cliente/login';
+    } catch (error) {
+        alert('Error al cerrar sesión');
+    }
 }
 
 cargarPerfil();
