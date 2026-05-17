@@ -20,6 +20,7 @@
         nav{ display:flex; gap:15px; margin-bottom:20px; flex-wrap:wrap; justify-content:center; }
         nav a{ color:white; text-decoration:none; padding:10px; border-radius:10px; background:#333; }
         nav a:hover{ background:#ff4d00; }
+        .loading{ text-align:center; padding:40px; color:#aaa; }
     </style>
 </head>
 <body>
@@ -34,10 +35,11 @@
     <a href="/cliente/mis-reservas">Mis Reservas</a>
 </nav>
 
-<div id="clasesContainer"></div>
+<div id="clasesContainer" class="loading">Cargando clases...</div>
 <p id="msg" class="error"></p>
 
 <script>
+// Verificar que el cliente está logueado
 const clienteEmail = localStorage.getItem('cliente_email');
 if (!clienteEmail) {
     window.location.href = '/cliente/login';
@@ -47,31 +49,40 @@ async function cargarClases() {
     const container = document.getElementById('clasesContainer');
     const msg = document.getElementById('msg');
     
+    container.innerHTML = '<div class="loading">Cargando clases...</div>';
+    msg.innerHTML = '';
+    
     try {
-        const response = await fetch('/cliente/clases?email=' + encodeURIComponent(clienteEmail));
-        const data = await response.json();
+        // Llamar a la API sin email (la ruta ya no requiere autenticación)
+        const response = await fetch('/cliente/clases');
         
         if (!response.ok) {
-            msg.innerHTML = '❌ ' + (data.error || 'Error al cargar clases');
+            const errorText = await response.text();
+            console.error('Error response:', errorText);
+            container.innerHTML = '';
+            msg.innerHTML = '❌ Error del servidor: ' + response.status;
             msg.className = 'error';
             return;
         }
         
+        const data = await response.json();
+        console.log('Clases recibidas:', data);
+        
         container.innerHTML = '';
         
-        if (!Array.isArray(data) || data.length === 0) {
-            container.innerHTML = '<div class="card"><p>No hay clases disponibles por ahora. El administrador creará clases pronto.</p></div>';
+        if (!data || !Array.isArray(data) || data.length === 0) {
+            container.innerHTML = '<div class="card"><p>📭 No hay clases disponibles por ahora. El administrador creará clases pronto.</p></div>';
             return;
         }
         
         for (const clase of data) {
-            const disponibles = clase.cupos_maximos - (clase.cupos_ocupados || 0);
+            const disponibles = (clase.cupos_maximos || 0) - (clase.cupos_ocupados || 0);
             const yaReservada = await verificarReserva(clase.id);
             
             container.innerHTML += `
                 <div class="card">
-                    <div class="clase-fecha">📅 ${clase.fecha}</div>
-                    <div class="clase-hora">⏰ ${clase.hora}</div>
+                    <div class="clase-fecha">📅 ${clase.fecha || 'Sin fecha'}</div>
+                    <div class="clase-hora">⏰ ${clase.hora || 'Sin hora'}</div>
                     <div class="cupos">📊 Cupos disponibles: ${disponibles}</div>
                     <button class="btn-reservar" 
                         onclick="reservarClase(${clase.id})"
@@ -82,13 +93,16 @@ async function cargarClases() {
             `;
         }
     } catch (error) {
-        console.error('Error:', error);
-        msg.innerHTML = '❌ Error de conexión al cargar clases';
+        console.error('Error detallado:', error);
+        container.innerHTML = '';
+        msg.innerHTML = '❌ Error de conexión: ' + error.message;
         msg.className = 'error';
     }
 }
 
 async function verificarReserva(claseId) {
+    if (!clienteEmail) return false;
+    
     try {
         const response = await fetch('/cliente/verificar-reserva', {
             method: 'POST',
@@ -101,6 +115,7 @@ async function verificarReserva(claseId) {
         const data = await response.json();
         return data.reservado === true;
     } catch (error) {
+        console.error('Error verificar reserva:', error);
         return false;
     }
 }
@@ -109,6 +124,8 @@ async function reservarClase(claseId) {
     if (!confirm('¿Reservar esta clase?')) return;
     
     const msg = document.getElementById('msg');
+    msg.innerHTML = '⏳ Procesando reserva...';
+    msg.className = '';
     
     try {
         const response = await fetch('/cliente/reservar', {
@@ -125,13 +142,14 @@ async function reservarClase(claseId) {
         if (response.ok) {
             msg.innerHTML = `✅ ${data.mensaje}`;
             msg.className = 'exito';
-            cargarClases();
+            cargarClases(); // Recargar la lista
         } else {
-            msg.innerHTML = `❌ ${data.error}`;
+            msg.innerHTML = `❌ ${data.error || 'Error al reservar'}`;
             msg.className = 'error';
         }
     } catch (error) {
-        msg.innerHTML = '❌ Error de conexión';
+        console.error('Error reservar:', error);
+        msg.innerHTML = '❌ Error de conexión al reservar';
         msg.className = 'error';
     }
 }
@@ -141,6 +159,7 @@ function cerrarSesion() {
     window.location.href = '/cliente/login';
 }
 
+// Cargar clases al iniciar
 cargarClases();
 </script>
 </body>
