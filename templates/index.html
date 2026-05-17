@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CrossFit Box</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        *{ margin:0; padding:0; box-sizing:border-box; }
+        body{ background:#111; color:white; font-family:Arial; display:flex; justify-content:center; align-items:center; height:100vh; }
+        .card{ background:#1e1e1e; padding:40px; border-radius:25px; text-align:center; width:300px; }
+        button{ width:100%; padding:14px; margin:10px 0; border:none; border-radius:12px; font-weight:bold; cursor:pointer; }
+        .btn-admin{ background:#ff4d00; color:white; }
+        .btn-cliente{ background:#00aa55; color:white; }
+        h1{ margin-bottom:30px; font-size:24px; }
+    </style>
+</head>
+<body>
+<div class="card">
+    <h1>🏋️ CrossFit Box</h1>
+    <button class="btn-admin" onclick="window.location.href='/admin/login'">Soy Administrador</button>
+    <button class="btn-cliente" onclick="window.location.href='/cliente/login'">Soy Atleta</button>
+</div>
+</body>
+</html>
