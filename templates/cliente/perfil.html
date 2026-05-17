@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Mi Perfil</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        *{ margin:0; padding:0; box-sizing:border-box; }
+        body{ background:#111; color:white; font-family:Arial; padding:20px; }
+        .card{ background:#1e1e1e; padding:30px; border-radius:25px; max-width:400px; margin:0 auto; }
+        button{ background:#ff4d00; color:white; padding:14px; border:none; border-radius:12px; margin-top:20px; width:100%; }
+    </style>
+</head>
+<body>
+<div class="card">
+    <h2>🏋️ Mi Perfil</h2>
+    <p id="info">Cargando...</p>
+    <button onclick="cerrarSesion()">Cerrar Sesión</button>
+</div>
+<script>
+async function cargarPerfil() {
+    try {
+        const res = await fetch('/cliente/perfil');
+        const data = await res.json();
+        if (res.ok) {
+            document.getElementById('info').innerHTML = `
+                <strong>Nombre:</strong> ${data.nombre}<br>
+                <strong>Email:</strong> ${data.email}<br>
+                <strong>Celular:</strong> ${data.celular || 'No registrado'}<br>
+                <strong>EPS:</strong> ${data.eps || 'No registrado'}<br>
+                <strong>Vencimiento:</strong> ${data.fecha_vencimiento || 'No registrado'}
+            `;
+        } else {
+            document.getElementById('info').innerHTML = "❌ Error al cargar perfil";
+        }
+    } catch (error) {
+        document.getElementById('info').innerHTML = "❌ Error de conexión";
+    }
+}
+
+async function cerrarSesion() {
+    await fetch('/cliente/logout', { method: 'POST' });
+    window.location.href = '/cliente/login';
+}
+
+cargarPerfil();
+</script>
+</body>
+</html>
