@@ -268,7 +268,7 @@ def cliente_perfil():
     return render_template('cliente/perfil.html')
 
 @app.route('/cliente/clases')
-def cliente_clases():
+def cliente_clases_html():
     return render_template('cliente/clases.html')
 
 @app.route('/cliente/mis-reservas')
@@ -342,15 +342,19 @@ def cliente_obtener_perfil():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+# ============================================
+# API CLIENTE - CLASES (GET para JSON)
+# ============================================
 @app.route('/cliente/clases', methods=['GET'])
 def cliente_obtener_clases():
     try:
         sheet = get_sheet("clases")
         registros = sheet.get_all_records()
+        # Mostrar solo clases con cupos disponibles
         clases_disponibles = [c for c in registros if c.get('cupos_maximos', 0) > c.get('cupos_ocupados', 0)]
         return jsonify(clases_disponibles)
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": str(e), "detalle": "Error al leer la hoja clases"}), 500
 
 @app.route('/cliente/logout', methods=['POST'])
 def cliente_logout():
