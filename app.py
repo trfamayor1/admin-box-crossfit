@@ -125,11 +125,33 @@ def admin_crear_cliente():
         sheet = get_sheet("clientes")
         registros = sheet.get_all_records()
         nuevo_id = len(registros) + 1
+        
+        # Obtener membresia_id seleccionada
+        membresia_id = data.get('membresia_id', '')
+        
+        # Buscar las clases_por_mes según la membresía seleccionada
+        clases_restantes = 0
+        try:
+            sheet_memb = get_sheet("membresias")
+            membresias = sheet_memb.get_all_records()
+            for m in membresias:
+                if str(m.get('id')) == str(membresia_id):
+                    clases_restantes = int(m.get('clases_por_mes', 0))
+                    break
+        except Exception as e:
+            print(f"Error al obtener clases por membresía: {e}")
+        
         sheet.append_row([
-            nuevo_id, data.get('nombre', ''), data.get('email', ''),
-            data.get('celular', ''), data.get('eps', ''), data.get('foto_url', ''),
-            data.get('membresia_id', ''), data.get('clases_restantes_mes', 0),
-            data.get('fecha_vencimiento', ''), data.get('activo', 'TRUE')
+            nuevo_id,
+            data.get('nombre', ''),
+            data.get('email', ''),
+            data.get('celular', ''),
+            data.get('eps', ''),
+            data.get('foto_url', ''),
+            membresia_id,
+            clases_restantes,
+            data.get('fecha_vencimiento', ''),
+            data.get('activo', 'TRUE')
         ])
         return jsonify({"mensaje": "Cliente creado", "id": nuevo_id})
     except Exception as e:
@@ -141,20 +163,44 @@ def admin_actualizar_cliente(cliente_id):
         data = request.json
         sheet = get_sheet("clientes")
         registros = sheet.get_all_records()
-        fila = None
-        for i, r in enumerate(registros, start=2):
-            if r.get('id') == cliente_id:
-                fila = i
+        
+        fila_index = None
+        for i, registro in enumerate(registros, start=2):
+            if registro.get('id') == cliente_id:
+                fila_index = i
                 break
-        if fila:
-            sheet.update(fila, [
-                cliente_id, data.get('nombre', ''), data.get('email', ''),
-                data.get('celular', ''), data.get('eps', ''), data.get('foto_url', ''),
-                data.get('membresia_id', ''), data.get('clases_restantes_mes', 0),
-                data.get('fecha_vencimiento', ''), data.get('activo', 'TRUE')
-            ])
-            return jsonify({"mensaje": "Cliente actualizado"})
-        return jsonify({"error": "No encontrado"}), 404
+        
+        if not fila_index:
+            return jsonify({"error": "Cliente no encontrado"}), 404
+        
+        # Obtener la membresía seleccionada
+        nueva_membresia_id = data.get('membresia_id', '')
+        
+        # Buscar las clases_por_mes según la membresía seleccionada
+        clases_restantes = 0
+        try:
+            sheet_memb = get_sheet("membresias")
+            membresias = sheet_memb.get_all_records()
+            for m in membresias:
+                if str(m.get('id')) == str(nueva_membresia_id):
+                    clases_restantes = int(m.get('clases_por_mes', 0))
+                    break
+        except Exception as e:
+            print(f"Error al obtener clases por membresía: {e}")
+        
+        sheet.update(fila_index, [
+            cliente_id,
+            data.get('nombre', ''),
+            data.get('email', ''),
+            data.get('celular', ''),
+            data.get('eps', ''),
+            data.get('foto_url', ''),
+            nueva_membresia_id,
+            clases_restantes,
+            data.get('fecha_vencimiento', ''),
+            data.get('activo', 'TRUE')
+        ])
+        return jsonify({"mensaje": "Cliente actualizado"})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
