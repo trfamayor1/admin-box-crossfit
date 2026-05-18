@@ -81,6 +81,8 @@ async function cancelarReserva(reservaId, claseId) {
     if (!confirm('¿Cancelar esta reserva?')) return;
     
     const msg = document.getElementById('msg');
+    msg.innerHTML = '⏳ Cancelando...';
+    msg.className = '';
     
     try {
         const response = await fetch('/cliente/cancelar-reserva', {
@@ -98,12 +100,17 @@ async function cancelarReserva(reservaId, claseId) {
         if (response.ok) {
             msg.innerHTML = `✅ ${data.mensaje}`;
             msg.className = 'exito';
-            cargarReservas();
+            cargarReservas(); // Recargar la lista de reservas
+            // Opcional: mostrar mensaje temporal y desaparecer
+            setTimeout(() => {
+                msg.innerHTML = '';
+            }, 3000);
         } else {
-            msg.innerHTML = `❌ ${data.error}`;
+            msg.innerHTML = `❌ ${data.error || 'Error al cancelar reserva'}`;
             msg.className = 'error';
         }
     } catch (error) {
+        console.error('Error al cancelar:', error);
         msg.innerHTML = '❌ Error de conexión';
         msg.className = 'error';
     }

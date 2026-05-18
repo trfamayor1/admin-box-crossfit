@@ -451,23 +451,16 @@ def cliente_reservar():
         
         # Guardar reserva
         sheet_reservas.append_row([
-            safe_str(nueva_id),
-            safe_str(cliente_id),
-            safe_str(clase_id),
-            safe_str(fecha_reserva),
+            str(nueva_id),
+            str(cliente_id),
+            str(clase_id),
+            fecha_reserva,
             "confirmada"
         ])
         
-        # Actualizar cupos
+        # Actualizar cupos (celda por celda)
         nuevo_cupo = int(safe_str(clase.get('cupos_ocupados', 0))) + 1
-        sheet_clases.update(fila_clase, [
-            safe_str(clase.get('id')),
-            safe_str(clase.get('fecha')),
-            safe_str(clase.get('hora')),
-            safe_str(clase.get('cupos_maximos', 0)),
-            safe_str(nuevo_cupo),
-            safe_str(clase.get('creada_por', 'admin'))
-        ])
+        sheet_clases.update_cell(fila_clase, 5, nuevo_cupo)  # Columna E = cupos_ocupados
         
         return jsonify({"mensaje": "Reserva confirmada"})
     except Exception as e:
@@ -536,19 +529,18 @@ def cliente_cancelar_reserva():
         reservas = sheet_reservas.get_all_records()
         
         fila_reserva = None
-        reserva_valida = False
         for i, r in enumerate(reservas, start=2):
             if r.get('id') == reserva_id and r.get('cliente_id') == cliente_id:
                 fila_reserva = i
-                reserva_valida = True
                 break
         
-        if not reserva_valida:
+        if not fila_reserva:
             return jsonify({"error": "Reserva no encontrada"}), 404
         
-        if fila_reserva:
-            sheet_reservas.delete_rows(fila_reserva)
+        # Eliminar reserva
+        sheet_reservas.delete_rows(fila_reserva)
         
+        # Actualizar cupos (restar 1)
         sheet_clases = get_sheet("clases")
         clases = sheet_clases.get_all_records()
         
@@ -561,20 +553,13 @@ def cliente_cancelar_reserva():
                 break
         
         if fila_clase and clase:
-            cupos_ocupados_actual = int(safe_str(clase.get('cupos_ocupados', 0)))
-            nuevo_cupo_ocupado = max(0, cupos_ocupados_actual - 1)
-            
-            sheet_clases.update(fila_clase, [
-                safe_str(clase.get('id')),
-                safe_str(clase.get('fecha')),
-                safe_str(clase.get('hora')),
-                safe_str(clase.get('cupos_maximos', 0)),
-                safe_str(nuevo_cupo_ocupado),
-                safe_str(clase.get('creada_por', 'admin'))
-            ])
+            cupos_actual = int(clase.get('cupos_ocupados', 0)) if clase.get('cupos_ocupados') is not None else 0
+            nuevo_cupo = max(0, cupos_actual - 1)
+            sheet_clases.update_cell(fila_clase, 5, nuevo_cupo)  # Columna E = cupos_ocupados
         
-        return jsonify({"mensaje": "Reserva cancelada exitosamente"})
+        return jsonify({"mensaje": "Reserva cancelada correctamente"})
     except Exception as e:
+        print(f"Error al cancelar: {e}")
         return jsonify({"error": str(e)}), 500
 
 # ============================================

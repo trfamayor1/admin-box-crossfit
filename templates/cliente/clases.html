@@ -135,10 +135,10 @@ async function reservarClase(claseId) {
         if (response.ok) {
             msg.innerHTML = `✅ ${data.mensaje}`;
             msg.className = 'exito';
-            // Recargar la lista de clases
+            cargarClases(); // Recargar lista de clases
             setTimeout(() => {
-                cargarClases();
-            }, 1000);
+                msg.innerHTML = '';
+            }, 3000);
         } else {
             msg.innerHTML = `❌ ${data.error || 'Error al reservar'}`;
             msg.className = 'error';
