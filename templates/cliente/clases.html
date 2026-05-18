@@ -21,6 +21,7 @@
         nav a{ color:white; text-decoration:none; padding:10px; border-radius:10px; background:#333; }
         nav a:hover{ background:#ff4d00; }
         .loading{ text-align:center; padding:40px; color:#aaa; }
+        .reservado{ background:#00aa55; color:white; border:none; padding:10px 20px; border-radius:10px; cursor:default; }
     </style>
 </head>
 <body>
@@ -53,7 +54,7 @@ async function cargarClases() {
     msg.innerHTML = '';
     
     try {
-        // Llamar a la API sin email (la ruta ya no requiere autenticación)
+        // Usar la API pública /api/clases
         const response = await fetch('/api/clases');
         
         if (!response.ok) {
@@ -75,20 +76,32 @@ async function cargarClases() {
             return;
         }
         
+        // Obtener reservas del cliente para saber qué clases ya reservó
+        const reservasResponse = await fetch('/cliente/mis-reservas', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: clienteEmail })
+        });
+        const reservas = await reservasResponse.json();
+        const clasesReservadas = new Set(reservas.map(r => r.clase_id));
+        
         for (const clase of data) {
             const disponibles = (clase.cupos_maximos || 0) - (clase.cupos_ocupados || 0);
-            const yaReservada = await verificarReserva(clase.id);
+            const yaReservada = clasesReservadas.has(clase.id);
+            const estaLlena = disponibles <= 0;
             
             container.innerHTML += `
                 <div class="card">
                     <div class="clase-fecha">📅 ${clase.fecha || 'Sin fecha'}</div>
                     <div class="clase-hora">⏰ ${clase.hora || 'Sin hora'}</div>
                     <div class="cupos">📊 Cupos disponibles: ${disponibles}</div>
-                    <button class="btn-reservar" 
-                        onclick="reservarClase(${clase.id})"
-                        ${yaReservada || disponibles <= 0 ? 'disabled' : ''}>
-                        ${yaReservada ? '✅ Ya reservaste' : (disponibles <= 0 ? '❌ Sin cupos' : '📝 Reservar')}
-                    </button>
+                    ${yaReservada ? 
+                        '<button class="reservado" disabled>✅ Ya reservaste</button>' : 
+                        (estaLlena ? 
+                            '<button class="btn-reservar" disabled>❌ Sin cupos</button>' : 
+                            `<button class="btn-reservar" onclick="reservarClase(${clase.id})">📝 Reservar</button>`
+                        )
+                    }
                 </div>
             `;
         }
@@ -97,26 +110,6 @@ async function cargarClases() {
         container.innerHTML = '';
         msg.innerHTML = '❌ Error de conexión: ' + error.message;
         msg.className = 'error';
-    }
-}
-
-async function verificarReserva(claseId) {
-    if (!clienteEmail) return false;
-    
-    try {
-        const response = await fetch('/cliente/verificar-reserva', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                email: clienteEmail,
-                clase_id: claseId 
-            })
-        });
-        const data = await response.json();
-        return data.reservado === true;
-    } catch (error) {
-        console.error('Error verificar reserva:', error);
-        return false;
     }
 }
 
@@ -142,7 +135,10 @@ async function reservarClase(claseId) {
         if (response.ok) {
             msg.innerHTML = `✅ ${data.mensaje}`;
             msg.className = 'exito';
-            cargarClases(); // Recargar la lista
+            // Recargar la lista de clases
+            setTimeout(() => {
+                cargarClases();
+            }, 1000);
         } else {
             msg.innerHTML = `❌ ${data.error || 'Error al reservar'}`;
             msg.className = 'error';
