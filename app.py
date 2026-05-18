@@ -6,6 +6,8 @@ import json
 import os
 from datetime import datetime, date
 
+from datetime import datetime, timedelta
+
 app = Flask(__name__)
 CORS(app)
 
@@ -291,16 +293,35 @@ def api_obtener_clases():
         sheet = get_sheet("clases")
         registros = sheet.get_all_records()
         
-        hoy = date.today().isoformat()
-        clases_futuras = []
+        ahora = datetime.now()
+        limite_24h = ahora + timedelta(hours=24)
+        
+        clases_disponibles = []
         for c in registros:
             fecha_clase = c.get('fecha', '')
-            if fecha_clase and fecha_clase >= hoy:
-                clases_futuras.append(c)
+            hora_clase = c.get('hora', '')
+            
+            if not fecha_clase or not hora_clase:
+                continue
+            
+            try:
+                # Combinar fecha y hora
+                datetime_clase = datetime.strptime(f"{fecha_clase} {hora_clase}", "%Y-%m-%d %H:%M")
+                
+                # Filtrar: clase debe ser entre ahora y 24 horas después
+                if ahora <= datetime_clase <= limite_24h:
+                    # Verificar cupos disponibles
+                    disponibles = int(c.get('cupos_maximos', 0)) - int(c.get('cupos_ocupados', 0))
+                    if disponibles > 0:
+                        clases_disponibles.append(c)
+            except:
+                # Si hay error al parsear, omitir esta clase
+                continue
         
-        return jsonify(clases_futuras)
+        return jsonify(clases_disponibles)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+    
 
 # ============================================
 # API CLIENTE - LOGIN Y PERFIL
@@ -406,12 +427,14 @@ def cliente_verificar_reserva():
         return jsonify({"reservado": False})
 
 @app.route('/cliente/reservar', methods=['POST'])
+@app.route('/cliente/reservar', methods=['POST'])
 def cliente_reservar():
     data = request.json
     email = data.get('email')
     clase_id = data.get('clase_id')
     
     try:
+        # Obtener cliente_id
         sheet_clientes = get_sheet("clientes")
         clientes = sheet_clientes.get_all_records()
         cliente_id = None
@@ -423,6 +446,7 @@ def cliente_reservar():
         if not cliente_id:
             return jsonify({"error": "Cliente no encontrado"}), 404
         
+        # Obtener la clase que quiere reservar
         sheet_clases = get_sheet("clases")
         clases = sheet_clases.get_all_records()
         clase = None
@@ -436,20 +460,39 @@ def cliente_reservar():
         if not clase:
             return jsonify({"error": "Clase no encontrada"}), 404
         
-        disponibles = int(safe_str(clase.get('cupos_maximos', 0))) - int(safe_str(clase.get('cupos_ocupados', 0)))
+        # Verificar cupos disponibles
+        disponibles = int(clase.get('cupos_maximos', 0)) - int(clase.get('cupos_ocupados', 0))
         if disponibles <= 0:
             return jsonify({"error": "No hay cupos disponibles"}), 400
         
+        # ============================================
+        # NUEVA VALIDACIÓN: Una reserva por día
+        # ============================================
+        fecha_clase_reservar = clase.get('fecha', '')
+        
         sheet_reservas = get_sheet("reservas")
         reservas = sheet_reservas.get_all_records()
+        sheet_clases_verificar = get_sheet("clases")
+        clases_verificar = sheet_clases_verificar.get_all_records()
+        
+        for r in reservas:
+            if r.get('cliente_id') == cliente_id and r.get('estado') == 'confirmada':
+                # Obtener la fecha de esa reserva
+                for c in clases_verificar:
+                    if c.get('id') == r.get('clase_id'):
+                        if c.get('fecha') == fecha_clase_reservar:
+                            return jsonify({"error": "Ya tienes una reserva en este día. Solo puedes reservar una clase por día."}), 400
+                        break
+        
+        # Verificar si ya reservó esta misma clase
         for r in reservas:
             if r.get('cliente_id') == cliente_id and r.get('clase_id') == clase_id:
                 return jsonify({"error": "Ya reservaste esta clase"}), 400
         
+        # Crear reserva
         nueva_id = len(reservas) + 1
         fecha_reserva = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         
-        # Guardar reserva
         sheet_reservas.append_row([
             str(nueva_id),
             str(cliente_id),
@@ -458,14 +501,15 @@ def cliente_reservar():
             "confirmada"
         ])
         
-        # Actualizar cupos (celda por celda)
-        nuevo_cupo = int(safe_str(clase.get('cupos_ocupados', 0))) + 1
-        sheet_clases.update_cell(fila_clase, 5, nuevo_cupo)  # Columna E = cupos_ocupados
+        # Actualizar cupos
+        nuevo_cupo = int(clase.get('cupos_ocupados', 0)) + 1
+        sheet_clases.update_cell(fila_clase, 5, nuevo_cupo)
         
         return jsonify({"mensaje": "Reserva confirmada"})
     except Exception as e:
         print(f"Error en reserva: {e}")
         return jsonify({"error": str(e)}), 500
+    
 
 @app.route('/cliente/mis-reservas', methods=['POST'])
 def cliente_mis_reservas():
