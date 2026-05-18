@@ -54,7 +54,7 @@ async function cargarClases() {
     
     try {
         // Llamar a la API sin email (la ruta ya no requiere autenticación)
-        const response = await fetch('/cliente/clases');
+        const response = await fetch('/api/clases');
         
         if (!response.ok) {
             const errorText = await response.text();

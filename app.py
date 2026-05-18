@@ -276,6 +276,18 @@ def cliente_mis_reservas_html():
     return render_template('cliente/mis-reservas.html')
 
 # ============================================
+# API PÚBLICA PARA CLASES (sin autenticación)
+# ============================================
+@app.route('/api/clases', methods=['GET'])
+def api_obtener_clases():
+    try:
+        sheet = get_sheet("clases")
+        registros = sheet.get_all_records()
+        return jsonify(registros)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# ============================================
 # API CLIENTE - LOGIN Y PERFIL
 # ============================================
 @app.route('/cliente/login', methods=['POST'])
@@ -339,20 +351,6 @@ def cliente_obtener_perfil():
                     "activo": registro.get('activo', 'TRUE')
                 })
         return jsonify({"error": "Perfil no encontrado"}), 404
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-# ============================================
-# API CLIENTE - CLASES (PÚBLICA - SIN AUTENTICACIÓN)
-# ============================================
-@app.route('/cliente/clases', methods=['GET'])
-def cliente_obtener_clases():
-    # Esta ruta es completamente pública - no requiere autenticación
-    try:
-        sheet = get_sheet("clases")
-        registros = sheet.get_all_records()
-        # Devolver todas las clases sin filtrar (para depuración)
-        return jsonify(registros)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
