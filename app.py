@@ -407,7 +407,9 @@ def cliente_agregar_rm():
 
 @app.route('/cliente/rm', methods=['GET'])
 def cliente_obtener_rm():
+    # Esta ruta es pública - no requiere autenticación
     email = request.args.get('email')
+    
     if not email:
         return jsonify([])
     
