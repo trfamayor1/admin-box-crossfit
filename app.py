@@ -136,7 +136,7 @@ def admin_crear_cliente():
                     clases_restantes = int(m.get('clases_por_mes', 0))
                     break
         except Exception as e:
-            print(f"Error al obtener clases por membresía: {e}")
+            print(f"Error: {e}")
         
         sheet.append_row([
             nuevo_id,
@@ -180,7 +180,7 @@ def admin_actualizar_cliente(cliente_id):
                     clases_restantes = int(m.get('clases_por_mes', 0))
                     break
         except Exception as e:
-            print(f"Error al obtener clases por membresía: {e}")
+            print(f"Error: {e}")
         
         sheet.update(fila_index, [
             cliente_id,
@@ -372,7 +372,7 @@ def cliente_logout():
     return jsonify({"mensaje": "Sesión cerrada"})
 
 # ============================================
-# API CLIENTE - RM
+# API CLIENTE - RM (CORREGIDO)
 # ============================================
 @app.route('/cliente/rm', methods=['POST'])
 def cliente_agregar_rm():
@@ -512,7 +512,7 @@ def cliente_eliminar_rm():
         return jsonify({"error": str(e)}), 500
 
 # ============================================
-# API CLIENTE - VERIFICAR RESERVA
+# API CLIENTE - RESERVAS
 # ============================================
 @app.route('/cliente/verificar-reserva', methods=['POST'])
 def cliente_verificar_reserva():
@@ -538,9 +538,6 @@ def cliente_verificar_reserva():
     except Exception as e:
         return jsonify({"reservado": False})
 
-# ============================================
-# API CLIENTE - RESERVAR
-# ============================================
 @app.route('/cliente/reservar', methods=['POST'])
 def cliente_reservar():
     data = request.json
@@ -564,7 +561,7 @@ def cliente_reservar():
         
         clases_restantes = int(cliente_actual.get('clases_restantes_mes', 0)) if cliente_actual else 0
         if clases_restantes <= 0:
-            return jsonify({"error": "No tienes clases disponibles. Contacta al administrador."}), 400
+            return jsonify({"error": "No tienes clases disponibles"}), 400
         
         sheet_clases = get_sheet("clases")
         clases = sheet_clases.get_all_records()
@@ -580,20 +577,19 @@ def cliente_reservar():
         
         disponibles = int(clase.get('cupos_maximos', 0)) - int(clase.get('cupos_ocupados', 0))
         if disponibles <= 0:
-            return jsonify({"error": "No hay cupos disponibles"}), 400
+            return jsonify({"error": "No hay cupos"}), 400
         
         fecha_clase_reservar = clase.get('fecha', '')
         sheet_reservas = get_sheet("reservas")
         reservas = sheet_reservas.get_all_records()
-        sheet_clases_verificar = get_sheet("clases")
-        clases_verificar = sheet_clases_verificar.get_all_records()
+        
         for r in reservas:
             if r.get('cliente_id') == cliente_id and r.get('estado') == 'confirmada':
+                sheet_clases_verificar = get_sheet("clases")
+                clases_verificar = sheet_clases_verificar.get_all_records()
                 for c in clases_verificar:
-                    if c.get('id') == r.get('clase_id'):
-                        if c.get('fecha') == fecha_clase_reservar:
-                            return jsonify({"error": "Ya tienes una reserva en este día."}), 400
-                        break
+                    if c.get('id') == r.get('clase_id') and c.get('fecha') == fecha_clase_reservar:
+                        return jsonify({"error": "Ya tienes reserva este día"}), 400
         
         for r in reservas:
             if r.get('cliente_id') == cliente_id and r.get('clase_id') == clase_id:
@@ -612,16 +608,11 @@ def cliente_reservar():
         sheet_clientes.update_cell(fila_cliente, 8, nuevas_restantes)
         
         return jsonify({
-            "mensaje": f"✅ Reserva confirmada. Te quedan {nuevas_restantes} clases.",
-            "clases_restantes": nuevas_restantes
+            "mensaje": f"✅ Reserva confirmada. Te quedan {nuevas_restantes} clases."
         })
     except Exception as e:
-        print(f"Error reserva: {e}")
         return jsonify({"error": str(e)}), 500
 
-# ============================================
-# API CLIENTE - MIS RESERVAS
-# ============================================
 @app.route('/cliente/mis-reservas', methods=['POST'])
 def cliente_mis_reservas():
     data = request.json
@@ -656,9 +647,6 @@ def cliente_mis_reservas():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# ============================================
-# API CLIENTE - CANCELAR RESERVA
-# ============================================
 @app.route('/cliente/cancelar-reserva', methods=['POST'])
 def cliente_cancelar_reserva():
     data = request.json
@@ -710,10 +698,9 @@ def cliente_cancelar_reserva():
             clases_restantes_actual = int(cliente_actual.get('clases_restantes_mes', 0))
             nuevas_restantes = clases_restantes_actual + 1
             sheet_clientes.update_cell(fila_cliente, 8, nuevas_restantes)
-            return jsonify({"mensaje": f"✅ Reserva cancelada. Ahora tienes {nuevas_restantes} clases disponibles."})
+            return jsonify({"mensaje": f"✅ Reserva cancelada. Ahora tienes {nuevas_restantes} clases."})
         return jsonify({"mensaje": "✅ Reserva cancelada."})
     except Exception as e:
-        print(f"Error cancelar: {e}")
         return jsonify({"error": str(e)}), 500
 
 # ============================================
