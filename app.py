@@ -407,13 +407,14 @@ def cliente_agregar_rm():
 
 @app.route('/cliente/rm', methods=['GET'])
 def cliente_obtener_rm():
-    # Esta ruta es pública - no requiere autenticación
+    # Esta ruta es completamente pública
     email = request.args.get('email')
     
     if not email:
         return jsonify([])
     
     try:
+        # Obtener cliente_id
         sheet_clientes = get_sheet("clientes")
         clientes = sheet_clientes.get_all_records()
         cliente_id = None
@@ -425,6 +426,7 @@ def cliente_obtener_rm():
         if not cliente_id:
             return jsonify([])
         
+        # Obtener RM del cliente
         sheet_rm = get_sheet("rm_records")
         registros = sheet_rm.get_all_records()
         
