@@ -75,6 +75,7 @@ let rmRecords = [];
 async function cargarHabilidades() {
     const res = await fetch('/api/habilidades');
     habilidades = await res.json();
+    console.log("📢 Habilidades cargadas:", habilidades);  // 👈 Agrega esto
     const select = document.getElementById('habilidadId');
     select.innerHTML = '';
     habilidades.forEach(h => {
@@ -95,7 +96,7 @@ function mostrarRM() {
     let filtrados = rmRecords;
     if (busqueda) {
         filtrados = rmRecords.filter(r => {
-            const habilidad = habilidades.find(h => h.id == r.habilidad_id);
+            const habilidad = habilidades.find(h => String(h.id) === String(r.habilidad_id));
             return habilidad && habilidad.nombre_habilidad.toLowerCase().includes(busqueda);
         });
     }
@@ -108,11 +109,13 @@ function mostrarRM() {
     }
     
     filtrados.forEach(r => {
-        const habilidad = habilidades.find(h => h.id == r.habilidad_id);
+        // 👇 LÍNEA CORREGIDA: convertir ambos a string para comparar
+        const habilidad = habilidades.find(h => String(h.id) === String(r.habilidad_id));
+        
         container.innerHTML += `
             <div class="card">
                 <div class="rm-info">
-                    <strong style="font-size:18px;">🏋️ ${habilidad ? habilidad.nombre_habilidad : 'Desconocido'}</strong>
+                    <strong style="font-size:18px;">🏋️ ${habilidad ? habilidad.nombre_habilidad : `Habilidad ID: ${r.habilidad_id}`}</strong>
                     <div class="rm-valor">${r.peso_kg} kg</div>
                     <div style="font-size:12px; color:#888;">${r.fecha_registro || ''}</div>
                 </div>
