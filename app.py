@@ -10,6 +10,13 @@ app = Flask(__name__)
 CORS(app)
 
 # ============================================
+# FUNCIÓN AUXILIAR PARA VALORES SEGUROS
+# ============================================
+def safe_str(value):
+    """Convierte cualquier valor a string seguro, evitando None"""
+    return '' if value is None else str(value)
+
+# ============================================
 # ANTI-CACHÉ
 # ============================================
 @app.after_request
@@ -429,7 +436,7 @@ def cliente_reservar():
         if not clase:
             return jsonify({"error": "Clase no encontrada"}), 404
         
-        disponibles = clase.get('cupos_maximos', 0) - clase.get('cupos_ocupados', 0)
+        disponibles = int(safe_str(clase.get('cupos_maximos', 0))) - int(safe_str(clase.get('cupos_ocupados', 0)))
         if disponibles <= 0:
             return jsonify({"error": "No hay cupos disponibles"}), 400
         
@@ -442,25 +449,29 @@ def cliente_reservar():
         nueva_id = len(reservas) + 1
         fecha_reserva = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         
+        # Guardar reserva
         sheet_reservas.append_row([
-            str(nueva_id),
-            str(cliente_id),
-            str(clase_id),
-            str(fecha_reserva),
+            safe_str(nueva_id),
+            safe_str(cliente_id),
+            safe_str(clase_id),
+            safe_str(fecha_reserva),
             "confirmada"
         ])
         
+        # Actualizar cupos
+        nuevo_cupo = int(safe_str(clase.get('cupos_ocupados', 0))) + 1
         sheet_clases.update(fila_clase, [
-            str(clase.get('id', '')),
-            str(clase.get('fecha', '')),
-            str(clase.get('hora', '')),
-            str(clase.get('cupos_maximos', 0)),
-            str(clase.get('cupos_ocupados', 0) + 1),
-            str(clase.get('creada_por', 'admin'))
+            safe_str(clase.get('id')),
+            safe_str(clase.get('fecha')),
+            safe_str(clase.get('hora')),
+            safe_str(clase.get('cupos_maximos', 0)),
+            safe_str(nuevo_cupo),
+            safe_str(clase.get('creada_por', 'admin'))
         ])
         
         return jsonify({"mensaje": "Reserva confirmada"})
     except Exception as e:
+        print(f"Error en reserva: {e}")
         return jsonify({"error": str(e)}), 500
 
 @app.route('/cliente/mis-reservas', methods=['POST'])
@@ -550,16 +561,16 @@ def cliente_cancelar_reserva():
                 break
         
         if fila_clase and clase:
-            cupos_ocupados_actual = clase.get('cupos_ocupados', 0)
+            cupos_ocupados_actual = int(safe_str(clase.get('cupos_ocupados', 0)))
             nuevo_cupo_ocupado = max(0, cupos_ocupados_actual - 1)
             
             sheet_clases.update(fila_clase, [
-                str(clase.get('id', '')),
-                str(clase.get('fecha', '')),
-                str(clase.get('hora', '')),
-                str(clase.get('cupos_maximos', 0)),
-                str(nuevo_cupo_ocupado),
-                str(clase.get('creada_por', 'admin'))
+                safe_str(clase.get('id')),
+                safe_str(clase.get('fecha')),
+                safe_str(clase.get('hora')),
+                safe_str(clase.get('cupos_maximos', 0)),
+                safe_str(nuevo_cupo_ocupado),
+                safe_str(clase.get('creada_por', 'admin'))
             ])
         
         return jsonify({"mensaje": "Reserva cancelada exitosamente"})
