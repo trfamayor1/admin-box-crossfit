@@ -708,6 +708,45 @@ def cliente_cancelar_reserva():
         return jsonify({"error": str(e)}), 500
 
 # ============================================
+# API PÚBLICA RM (sin autenticación)
+# ============================================
+@app.route('/api/rm', methods=['GET'])
+def api_obtener_rm():
+    email = request.args.get('email')
+    
+    if not email:
+        return jsonify([])
+    
+    try:
+        sheet_clientes = get_sheet("clientes")
+        clientes = sheet_clientes.get_all_records()
+        cliente_id = None
+        for c in clientes:
+            if c.get('email') == email:
+                cliente_id = c.get('id')
+                break
+        
+        if not cliente_id:
+            return jsonify([])
+        
+        sheet_rm = get_sheet("rm_records")
+        registros = sheet_rm.get_all_records()
+        
+        resultado = []
+        for r in registros:
+            if r.get('cliente_id') == cliente_id:
+                resultado.append({
+                    "id": r.get('id'),
+                    "habilidad_id": r.get('habilidad_id'),
+                    "peso_kg": r.get('peso_kg'),
+                    "fecha_registro": r.get('fecha_registro')
+                })
+        return jsonify(resultado)
+    except Exception as e:
+        return jsonify([])
+    
+    
+# ============================================
 # INICIAR SERVIDOR
 # ============================================
 if __name__ == "__main__":

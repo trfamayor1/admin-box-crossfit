@@ -83,7 +83,7 @@ async function cargarHabilidades() {
 }
 
 async function cargarRM() {
-    const res = await fetch(`/cliente/rm?email=${encodeURIComponent(clienteEmail)}`);
+    const res = await fetch(`/api/rm?email=${encodeURIComponent(clienteEmail)}`);
     rmRecords = await res.json();
     mostrarRM();
 }
