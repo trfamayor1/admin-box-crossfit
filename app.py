@@ -4,7 +4,7 @@ import gspread
 from google.oauth2.service_account import Credentials
 import json
 import os
-from datetime import datetime
+from datetime import datetime, date
 
 app = Flask(__name__)
 CORS(app)
@@ -279,17 +279,12 @@ def cliente_mis_reservas_html():
 # API PÚBLICA PARA CLASES (sin autenticación)
 # ============================================
 @app.route('/api/clases', methods=['GET'])
-from datetime import date
-
-@app.route('/api/clases', methods=['GET'])
 def api_obtener_clases():
     try:
         sheet = get_sheet("clases")
         registros = sheet.get_all_records()
         
-        hoy = date.today().isoformat()  # Fecha actual en formato YYYY-MM-DD
-        
-        # Filtrar solo clases con fecha >= hoy
+        hoy = date.today().isoformat()
         clases_futuras = []
         for c in registros:
             fecha_clase = c.get('fecha', '')
@@ -299,7 +294,6 @@ def api_obtener_clases():
         return jsonify(clases_futuras)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-    
 
 # ============================================
 # API CLIENTE - LOGIN Y PERFIL
@@ -382,7 +376,6 @@ def cliente_verificar_reserva():
     clase_id = data.get('clase_id')
     
     try:
-        # Obtener cliente_id
         sheet_clientes = get_sheet("clientes")
         clientes = sheet_clientes.get_all_records()
         cliente_id = None
@@ -406,14 +399,12 @@ def cliente_verificar_reserva():
         return jsonify({"reservado": False})
 
 @app.route('/cliente/reservar', methods=['POST'])
-@app.route('/cliente/reservar', methods=['POST'])
 def cliente_reservar():
     data = request.json
     email = data.get('email')
     clase_id = data.get('clase_id')
     
     try:
-        # Obtener cliente_id
         sheet_clientes = get_sheet("clientes")
         clientes = sheet_clientes.get_all_records()
         cliente_id = None
@@ -425,7 +416,6 @@ def cliente_reservar():
         if not cliente_id:
             return jsonify({"error": "Cliente no encontrado"}), 404
         
-        # Verificar cupos
         sheet_clases = get_sheet("clases")
         clases = sheet_clases.get_all_records()
         clase = None
@@ -443,18 +433,15 @@ def cliente_reservar():
         if disponibles <= 0:
             return jsonify({"error": "No hay cupos disponibles"}), 400
         
-        # Verificar si ya reservó
         sheet_reservas = get_sheet("reservas")
         reservas = sheet_reservas.get_all_records()
         for r in reservas:
             if r.get('cliente_id') == cliente_id and r.get('clase_id') == clase_id:
                 return jsonify({"error": "Ya reservaste esta clase"}), 400
         
-        # Crear reserva
         nueva_id = len(reservas) + 1
         fecha_reserva = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         
-        # Convertir todo a string para evitar errores de Google Sheets
         sheet_reservas.append_row([
             str(nueva_id),
             str(cliente_id),
@@ -463,7 +450,6 @@ def cliente_reservar():
             "confirmada"
         ])
         
-        # Actualizar cupos ocupados
         sheet_clases.update(fila_clase, [
             str(clase.get('id', '')),
             str(clase.get('fecha', '')),
@@ -476,16 +462,13 @@ def cliente_reservar():
         return jsonify({"mensaje": "Reserva confirmada"})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-    
 
-    
 @app.route('/cliente/mis-reservas', methods=['POST'])
 def cliente_mis_reservas():
     data = request.json
     email = data.get('email')
     
     try:
-        # Obtener cliente_id
         sheet_clientes = get_sheet("clientes")
         clientes = sheet_clientes.get_all_records()
         cliente_id = None
@@ -497,7 +480,6 @@ def cliente_mis_reservas():
         if not cliente_id:
             return jsonify([])
         
-        # Obtener reservas del cliente
         sheet_reservas = get_sheet("reservas")
         reservas = sheet_reservas.get_all_records()
         sheet_clases = get_sheet("clases")
@@ -521,7 +503,6 @@ def cliente_mis_reservas():
         return jsonify({"error": str(e)}), 500
 
 @app.route('/cliente/cancelar-reserva', methods=['POST'])
-@app.route('/cliente/cancelar-reserva', methods=['POST'])
 def cliente_cancelar_reserva():
     data = request.json
     email = data.get('email')
@@ -529,7 +510,6 @@ def cliente_cancelar_reserva():
     clase_id = data.get('clase_id')
     
     try:
-        # 1. Obtener cliente_id
         sheet_clientes = get_sheet("clientes")
         clientes = sheet_clientes.get_all_records()
         cliente_id = None
@@ -541,7 +521,6 @@ def cliente_cancelar_reserva():
         if not cliente_id:
             return jsonify({"error": "Cliente no encontrado"}), 404
         
-        # 2. Verificar que la reserva existe y pertenece al cliente
         sheet_reservas = get_sheet("reservas")
         reservas = sheet_reservas.get_all_records()
         
@@ -556,11 +535,9 @@ def cliente_cancelar_reserva():
         if not reserva_valida:
             return jsonify({"error": "Reserva no encontrada"}), 404
         
-        # 3. Eliminar la reserva
         if fila_reserva:
             sheet_reservas.delete_rows(fila_reserva)
         
-        # 4. Actualizar cupos de la clase (disminuir en 1)
         sheet_clases = get_sheet("clases")
         clases = sheet_clases.get_all_records()
         
@@ -576,7 +553,6 @@ def cliente_cancelar_reserva():
             cupos_ocupados_actual = clase.get('cupos_ocupados', 0)
             nuevo_cupo_ocupado = max(0, cupos_ocupados_actual - 1)
             
-            # Actualizar la fila en Google Sheets (todos los valores como string)
             sheet_clases.update(fila_clase, [
                 str(clase.get('id', '')),
                 str(clase.get('fecha', '')),
@@ -589,7 +565,6 @@ def cliente_cancelar_reserva():
         return jsonify({"mensaje": "Reserva cancelada exitosamente"})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-    
 
 # ============================================
 # INICIAR SERVIDOR
