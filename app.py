@@ -126,10 +126,7 @@ def admin_crear_cliente():
         registros = sheet.get_all_records()
         nuevo_id = len(registros) + 1
         
-        # Obtener membresia_id seleccionada
         membresia_id = data.get('membresia_id', '')
-        
-        # Buscar las clases_por_mes según la membresía seleccionada
         clases_restantes = 0
         try:
             sheet_memb = get_sheet("membresias")
@@ -173,10 +170,7 @@ def admin_actualizar_cliente(cliente_id):
         if not fila_index:
             return jsonify({"error": "Cliente no encontrado"}), 404
         
-        # Obtener la membresía seleccionada
         nueva_membresia_id = data.get('membresia_id', '')
-        
-        # Buscar las clases_por_mes según la membresía seleccionada
         clases_restantes = 0
         try:
             sheet_memb = get_sheet("membresias")
@@ -280,6 +274,10 @@ def cliente_clases_html():
 def cliente_mis_reservas_html():
     return render_template('cliente/mis-reservas.html')
 
+@app.route('/cliente/rm')
+def cliente_rm_html():
+    return render_template('cliente/rm.html')
+
 # ============================================
 # API PÚBLICA CLASES (24h)
 # ============================================
@@ -305,6 +303,18 @@ def api_obtener_clases():
             except:
                 continue
         return jsonify(clases_disponibles)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# ============================================
+# API HABILIDADES (pública)
+# ============================================
+@app.route('/api/habilidades', methods=['GET'])
+def api_obtener_habilidades():
+    try:
+        sheet = get_sheet("habilidades")
+        registros = sheet.get_all_records()
+        return jsonify(registros)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -349,6 +359,7 @@ def cliente_obtener_perfil():
                     "celular": registro.get('celular', ''),
                     "eps": registro.get('eps', ''),
                     "membresia_id": registro.get('membresia_id', ''),
+                    "clases_restantes": registro.get('clases_restantes_mes', 0),
                     "fecha_vencimiento": registro.get('fecha_vencimiento', ''),
                     "activo": registro.get('activo', 'TRUE')
                 })
@@ -361,7 +372,147 @@ def cliente_logout():
     return jsonify({"mensaje": "Sesión cerrada"})
 
 # ============================================
-# API CLIENTE - RESERVAS (CON MEMBRESÍAS)
+# API CLIENTE - RM
+# ============================================
+@app.route('/cliente/rm', methods=['POST'])
+def cliente_agregar_rm():
+    data = request.json
+    email = data.get('email')
+    habilidad_id = data.get('habilidad_id')
+    peso_kg = data.get('peso_kg')
+    
+    try:
+        sheet_clientes = get_sheet("clientes")
+        clientes = sheet_clientes.get_all_records()
+        cliente_id = None
+        for c in clientes:
+            if c.get('email') == email:
+                cliente_id = c.get('id')
+                break
+        
+        if not cliente_id:
+            return jsonify({"error": "Cliente no encontrado"}), 404
+        
+        sheet_rm = get_sheet("rm_records")
+        registros = sheet_rm.get_all_records()
+        nuevo_id = len(registros) + 1
+        fecha_actual = datetime.now().strftime("%Y-%m-%d")
+        
+        sheet_rm.append_row([
+            str(nuevo_id), str(cliente_id), str(habilidad_id), str(peso_kg), fecha_actual
+        ])
+        return jsonify({"mensaje": "RM guardado correctamente"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/cliente/rm', methods=['GET'])
+def cliente_obtener_rm():
+    email = request.args.get('email')
+    if not email:
+        return jsonify([])
+    
+    try:
+        sheet_clientes = get_sheet("clientes")
+        clientes = sheet_clientes.get_all_records()
+        cliente_id = None
+        for c in clientes:
+            if c.get('email') == email:
+                cliente_id = c.get('id')
+                break
+        
+        if not cliente_id:
+            return jsonify([])
+        
+        sheet_rm = get_sheet("rm_records")
+        registros = sheet_rm.get_all_records()
+        
+        resultado = []
+        for r in registros:
+            if r.get('cliente_id') == cliente_id:
+                resultado.append({
+                    "id": r.get('id'),
+                    "habilidad_id": r.get('habilidad_id'),
+                    "peso_kg": r.get('peso_kg'),
+                    "fecha_registro": r.get('fecha_registro')
+                })
+        return jsonify(resultado)
+    except Exception as e:
+        return jsonify([])
+
+@app.route('/cliente/rm', methods=['PUT'])
+def cliente_actualizar_rm():
+    data = request.json
+    email = data.get('email')
+    rm_id = data.get('id')
+    habilidad_id = data.get('habilidad_id')
+    peso_kg = data.get('peso_kg')
+    
+    try:
+        sheet_clientes = get_sheet("clientes")
+        clientes = sheet_clientes.get_all_records()
+        cliente_id = None
+        for c in clientes:
+            if c.get('email') == email:
+                cliente_id = c.get('id')
+                break
+        
+        if not cliente_id:
+            return jsonify({"error": "Cliente no encontrado"}), 404
+        
+        sheet_rm = get_sheet("rm_records")
+        registros = sheet_rm.get_all_records()
+        
+        fila_index = None
+        for i, r in enumerate(registros, start=2):
+            if r.get('id') == rm_id and r.get('cliente_id') == cliente_id:
+                fila_index = i
+                break
+        
+        if fila_index:
+            sheet_rm.update(fila_index, [
+                str(rm_id), str(cliente_id), str(habilidad_id), str(peso_kg), datetime.now().strftime("%Y-%m-%d")
+            ])
+            return jsonify({"mensaje": "RM actualizado correctamente"})
+        return jsonify({"error": "RM no encontrado"}), 404
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/cliente/rm', methods=['DELETE'])
+def cliente_eliminar_rm():
+    data = request.json
+    email = data.get('email')
+    rm_id = data.get('id')
+    
+    try:
+        sheet_clientes = get_sheet("clientes")
+        clientes = sheet_clientes.get_all_records()
+        cliente_id = None
+        for c in clientes:
+            if c.get('email') == email:
+                cliente_id = c.get('id')
+                break
+        
+        if not cliente_id:
+            return jsonify({"error": "Cliente no encontrado"}), 404
+        
+        sheet_rm = get_sheet("rm_records")
+        registros = sheet_rm.get_all_records()
+        
+        fila_index = None
+        for i, r in enumerate(registros, start=2):
+            if r.get('id') == rm_id and r.get('cliente_id') == cliente_id:
+                fila_index = i
+                break
+        
+        if fila_index:
+            sheet_rm.delete_rows(fila_index)
+            return jsonify({"mensaje": "RM eliminado correctamente"})
+        return jsonify({"error": "RM no encontrado"}), 404
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# ============================================
+# API CLIENTE - VERIFICAR RESERVA
 # ============================================
 @app.route('/cliente/verificar-reserva', methods=['POST'])
 def cliente_verificar_reserva():
@@ -387,6 +538,9 @@ def cliente_verificar_reserva():
     except Exception as e:
         return jsonify({"reservado": False})
 
+# ============================================
+# API CLIENTE - RESERVAR
+# ============================================
 @app.route('/cliente/reservar', methods=['POST'])
 def cliente_reservar():
     data = request.json
@@ -394,7 +548,6 @@ def cliente_reservar():
     clase_id = data.get('clase_id')
     
     try:
-        # 1. Obtener cliente
         sheet_clientes = get_sheet("clientes")
         clientes = sheet_clientes.get_all_records()
         cliente_id = None
@@ -409,12 +562,10 @@ def cliente_reservar():
         if not cliente_id:
             return jsonify({"error": "Cliente no encontrado"}), 404
         
-        # 2. Verificar clases restantes
         clases_restantes = int(cliente_actual.get('clases_restantes_mes', 0)) if cliente_actual else 0
         if clases_restantes <= 0:
             return jsonify({"error": "No tienes clases disponibles. Contacta al administrador."}), 400
         
-        # 3. Obtener clase
         sheet_clases = get_sheet("clases")
         clases = sheet_clases.get_all_records()
         clase = None
@@ -427,12 +578,10 @@ def cliente_reservar():
         if not clase:
             return jsonify({"error": "Clase no encontrada"}), 404
         
-        # 4. Verificar cupos
         disponibles = int(clase.get('cupos_maximos', 0)) - int(clase.get('cupos_ocupados', 0))
         if disponibles <= 0:
             return jsonify({"error": "No hay cupos disponibles"}), 400
         
-        # 5. Verificar reserva mismo día
         fecha_clase_reservar = clase.get('fecha', '')
         sheet_reservas = get_sheet("reservas")
         reservas = sheet_reservas.get_all_records()
@@ -446,23 +595,19 @@ def cliente_reservar():
                             return jsonify({"error": "Ya tienes una reserva en este día."}), 400
                         break
         
-        # 6. Verificar misma clase
         for r in reservas:
             if r.get('cliente_id') == cliente_id and r.get('clase_id') == clase_id:
                 return jsonify({"error": "Ya reservaste esta clase"}), 400
         
-        # 7. Crear reserva
         nueva_id = len(reservas) + 1
         fecha_reserva = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         sheet_reservas.append_row([
             str(nueva_id), str(cliente_id), str(clase_id), fecha_reserva, "confirmada"
         ])
         
-        # 8. Actualizar cupos
         nuevo_cupo = int(clase.get('cupos_ocupados', 0)) + 1
         sheet_clases.update_cell(fila_clase, 5, nuevo_cupo)
         
-        # 9. Descontar membresía
         nuevas_restantes = max(0, clases_restantes - 1)
         sheet_clientes.update_cell(fila_cliente, 8, nuevas_restantes)
         
@@ -474,6 +619,9 @@ def cliente_reservar():
         print(f"Error reserva: {e}")
         return jsonify({"error": str(e)}), 500
 
+# ============================================
+# API CLIENTE - MIS RESERVAS
+# ============================================
 @app.route('/cliente/mis-reservas', methods=['POST'])
 def cliente_mis_reservas():
     data = request.json
@@ -508,6 +656,9 @@ def cliente_mis_reservas():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+# ============================================
+# API CLIENTE - CANCELAR RESERVA
+# ============================================
 @app.route('/cliente/cancelar-reserva', methods=['POST'])
 def cliente_cancelar_reserva():
     data = request.json
@@ -516,7 +667,6 @@ def cliente_cancelar_reserva():
     clase_id = data.get('clase_id')
     
     try:
-        # Obtener cliente
         sheet_clientes = get_sheet("clientes")
         clientes = sheet_clientes.get_all_records()
         cliente_id = None
@@ -531,7 +681,6 @@ def cliente_cancelar_reserva():
         if not cliente_id:
             return jsonify({"error": "Cliente no encontrado"}), 404
         
-        # Eliminar reserva
         sheet_reservas = get_sheet("reservas")
         reservas = sheet_reservas.get_all_records()
         fila_reserva = None
@@ -543,7 +692,6 @@ def cliente_cancelar_reserva():
             return jsonify({"error": "Reserva no encontrada"}), 404
         sheet_reservas.delete_rows(fila_reserva)
         
-        # Actualizar cupos
         sheet_clases = get_sheet("clases")
         clases = sheet_clases.get_all_records()
         fila_clase = None
@@ -558,7 +706,6 @@ def cliente_cancelar_reserva():
             nuevo_cupo = max(0, cupos_actual - 1)
             sheet_clases.update_cell(fila_clase, 5, nuevo_cupo)
         
-        # Devolver clase a la membresía
         if fila_cliente and cliente_actual:
             clases_restantes_actual = int(cliente_actual.get('clases_restantes_mes', 0))
             nuevas_restantes = clases_restantes_actual + 1
