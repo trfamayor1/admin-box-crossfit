@@ -19,6 +19,8 @@
         .campo{ margin:15px 0; padding:10px; background:#2a2a2a; border-radius:10px; }
         .campo-label{ color:#ff4d00; font-weight:bold; margin-bottom:5px; }
         .campo-valor{ font-size:16px; }
+        .foto-container{ text-align:center; margin-bottom:20px; }
+        .foto-perfil{ width:120px; height:120px; border-radius:50%; object-fit:cover; margin:10px auto; background:#333; }
     </style>
 </head>
 <body>
@@ -30,11 +32,20 @@
 <nav>
     <a href="/cliente/perfil">Mi Perfil</a>
     <a href="/cliente/clases">Clases</a>
-    <a href="/cliente/rm">Mis RM</a>
     <a href="/cliente/mis-reservas">Mis Reservas</a>
+    <a href="/cliente/rm">Mis RM</a>
 </nav>
 
 <div class="card">
+    <!-- Foto de perfil -->
+    <div class="foto-container">
+        <div class="campo-label">📸 Foto de perfil</div>
+        <img id="fotoPerfil" class="foto-perfil" src="https://via.placeholder.com/120?text=Sin+foto" alt="Tu foto">
+        <input type="file" id="fotoInput" accept="image/*" style="margin:10px 0; padding:5px;">
+        <button onclick="subirFoto()" style="background:#00aa55;">📤 Subir Foto</button>
+        <p id="fotoMsg" style="font-size:12px; margin-top:10px;"></p>
+    </div>
+
     <div id="info" class="info">Cargando...</div>
     <p id="errorMsg" class="error"></p>
 </div>
@@ -79,10 +90,14 @@ async function cargarPerfil() {
                 </div>
                 <div class="campo">
                     <div class="campo-label">💳 Membresía</div>
-                    <div class="campo-valor">${data.membresia_nombre || data.membresia_id || 'No asignada'}</div>
+                    <div class="campo-valor">${data.membresia_id || 'No asignada'}</div>
                 </div>
                 <div class="campo">
-                    <div class="campo-label">📅 Vencimiento</div>
+                    <div class="campo-label">📅 Clases restantes</div>
+                    <div class="campo-valor">${data.clases_restantes || 0}</div>
+                </div>
+                <div class="campo">
+                    <div class="campo-label">📆 Vencimiento</div>
                     <div class="campo-valor">${data.fecha_vencimiento || 'No registrado'}</div>
                 </div>
                 <div class="campo">
@@ -90,6 +105,11 @@ async function cargarPerfil() {
                     <div class="campo-valor">${data.activo == 'TRUE' ? '✅ Activo' : '❌ Inactivo'}</div>
                 </div>
             `;
+            
+            // Mostrar foto si existe
+            if (data.foto_url) {
+                document.getElementById('fotoPerfil').src = data.foto_url;
+            }
             errorMsg.innerHTML = '';
         } else {
             infoDiv.innerHTML = '';
@@ -97,8 +117,48 @@ async function cargarPerfil() {
         }
     } catch (error) {
         infoDiv.innerHTML = '';
-        errorMsg.innerHTML = '❌ Error de conexión con el servidor';
+        errorMsg.innerHTML = '❌ Error de conexión';
         console.error('Error:', error);
+    }
+}
+
+async function subirFoto() {
+    const input = document.getElementById('fotoInput');
+    const msg = document.getElementById('fotoMsg');
+    const foto = input.files[0];
+    
+    if (!foto) {
+        msg.innerHTML = "❌ Selecciona una foto";
+        msg.style.color = "#ff6666";
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('email', clienteEmail);
+    formData.append('foto', foto);
+    
+    msg.innerHTML = "⏳ Subiendo...";
+    msg.style.color = "#ffaa00";
+    
+    try {
+        const response = await fetch('/cliente/subir-foto', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            msg.innerHTML = "✅ " + data.mensaje;
+            msg.style.color = "#66ff66";
+            document.getElementById('fotoPerfil').src = data.url + "?t=" + Date.now();
+        } else {
+            msg.innerHTML = "❌ " + data.error;
+            msg.style.color = "#ff6666";
+        }
+    } catch (error) {
+        msg.innerHTML = "❌ Error de conexión";
+        msg.style.color = "#ff6666";
     }
 }
 

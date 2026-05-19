@@ -2,8 +2,11 @@ from flask import Flask, jsonify, request, send_from_directory, render_template
 from flask_cors import CORS
 import gspread
 from google.oauth2.service_account import Credentials
+from googleapiclient.discovery import build
+from googleapiclient.http import MediaFileUpload
 import json
 import os
+import tempfile
 from datetime import datetime, date, timedelta
 
 app = Flask(__name__)
@@ -307,7 +310,7 @@ def api_obtener_clases():
         return jsonify({"error": str(e)}), 500
 
 # ============================================
-# API HABILIDADES (pública)
+# API PÚBLICA HABILIDADES
 # ============================================
 @app.route('/api/habilidades', methods=['GET'])
 def api_obtener_habilidades():
@@ -315,6 +318,123 @@ def api_obtener_habilidades():
         sheet = get_sheet("habilidades")
         registros = sheet.get_all_records()
         return jsonify(registros)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# ============================================
+# API PÚBLICA RM (sin autenticación)
+# ============================================
+@app.route('/api/rm', methods=['GET'])
+def api_obtener_rm():
+    email = request.args.get('email')
+    if not email:
+        return jsonify([])
+    
+    try:
+        sheet_clientes = get_sheet("clientes")
+        clientes = sheet_clientes.get_all_records()
+        cliente_id = None
+        for c in clientes:
+            if c.get('email') == email:
+                cliente_id = c.get('id')
+                break
+        
+        if not cliente_id:
+            return jsonify([])
+        
+        sheet_rm = get_sheet("rm_records")
+        registros = sheet_rm.get_all_records()
+        
+        resultado = []
+        for r in registros:
+            if r.get('cliente_id') == cliente_id:
+                resultado.append({
+                    "id": r.get('id'),
+                    "habilidad_id": r.get('habilidad_id'),
+                    "peso_kg": r.get('peso_kg'),
+                    "fecha_registro": r.get('fecha_registro')
+                })
+        return jsonify(resultado)
+    except Exception as e:
+        return jsonify([])
+
+# ============================================
+# SUBIR FOTO DE PERFIL A GOOGLE DRIVE
+# ============================================
+def subir_foto_a_drive(archivo, nombre_archivo, folder_id):
+    try:
+        if os.environ.get('GOOGLE_CREDENTIALS'):
+            creds_dict = json.loads(os.environ.get('GOOGLE_CREDENTIALS'))
+            creds = Credentials.from_service_account_info(creds_dict, scopes=scope)
+        else:
+            creds = Credentials.from_service_account_file("credenciales.json", scopes=scope)
+        
+        drive_service = build('drive', 'v3', credentials=creds)
+        
+        file_metadata = {
+            'name': nombre_archivo,
+            'parents': [folder_id]
+        }
+        media = MediaFileUpload(archivo, mimetype='image/jpeg', resumable=True)
+        
+        file = drive_service.files().create(
+            body=file_metadata,
+            media_body=media,
+            fields='id'
+        ).execute()
+        
+        file_id = file.get('id')
+        
+        # Hacer público
+        drive_service.permissions().create(
+            fileId=file_id,
+            body={'type': 'anyone', 'role': 'reader'}
+        ).execute()
+        
+        return f"https://drive.google.com/uc?export=view&id={file_id}"
+    except Exception as e:
+        print(f"Error subiendo foto: {e}")
+        return None
+
+@app.route('/cliente/subir-foto', methods=['POST'])
+def cliente_subir_foto():
+    email = request.form.get('email')
+    foto = request.files.get('foto')
+    
+    if not email or not foto:
+        return jsonify({"error": "Email y foto son requeridos"}), 400
+    
+    if not foto.content_type.startswith('image/'):
+        return jsonify({"error": "Solo se permiten imágenes"}), 400
+    
+    with tempfile.NamedTemporaryFile(delete=False, suffix='.jpg') as tmp:
+        foto.save(tmp.name)
+        tmp_path = tmp.name
+    
+    # CAMBIA ESTO POR TU FOLDER_ID REAL
+    FOLDER_ID = "1YeK6Nok3XQo3VSgMy3YTKgBIDxOX1tOT"
+    nombre_archivo = f"foto_{email}_{datetime.now().strftime('%Y%m%d%H%M%S')}.jpg"
+    url_publica = subir_foto_a_drive(tmp_path, nombre_archivo, FOLDER_ID)
+    
+    os.unlink(tmp_path)
+    
+    if not url_publica:
+        return jsonify({"error": "Error al subir la foto"}), 500
+    
+    try:
+        sheet_clientes = get_sheet("clientes")
+        clientes = sheet_clientes.get_all_records()
+        
+        fila_cliente = None
+        for i, c in enumerate(clientes, start=2):
+            if c.get('email') == email:
+                fila_cliente = i
+                break
+        
+        if fila_cliente:
+            sheet_clientes.update_cell(fila_cliente, 6, url_publica)
+        
+        return jsonify({"mensaje": "Foto actualizada", "url": url_publica})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -361,7 +481,8 @@ def cliente_obtener_perfil():
                     "membresia_id": registro.get('membresia_id', ''),
                     "clases_restantes": registro.get('clases_restantes_mes', 0),
                     "fecha_vencimiento": registro.get('fecha_vencimiento', ''),
-                    "activo": registro.get('activo', 'TRUE')
+                    "activo": registro.get('activo', 'TRUE'),
+                    "foto_url": registro.get('foto_url', '')
                 })
         return jsonify({"error": "Perfil no encontrado"}), 404
     except Exception as e:
@@ -372,7 +493,7 @@ def cliente_logout():
     return jsonify({"mensaje": "Sesión cerrada"})
 
 # ============================================
-# API CLIENTE - RM (CORREGIDO)
+# API CLIENTE - RM (POST, PUT, DELETE)
 # ============================================
 @app.route('/cliente/rm', methods=['POST'])
 def cliente_agregar_rm():
@@ -404,44 +525,6 @@ def cliente_agregar_rm():
         return jsonify({"mensaje": "RM guardado correctamente"})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
-@app.route('/cliente/rm', methods=['GET'])
-def cliente_obtener_rm():
-    # Esta ruta es completamente pública
-    email = request.args.get('email')
-    
-    if not email:
-        return jsonify([])
-    
-    try:
-        # Obtener cliente_id
-        sheet_clientes = get_sheet("clientes")
-        clientes = sheet_clientes.get_all_records()
-        cliente_id = None
-        for c in clientes:
-            if c.get('email') == email:
-                cliente_id = c.get('id')
-                break
-        
-        if not cliente_id:
-            return jsonify([])
-        
-        # Obtener RM del cliente
-        sheet_rm = get_sheet("rm_records")
-        registros = sheet_rm.get_all_records()
-        
-        resultado = []
-        for r in registros:
-            if r.get('cliente_id') == cliente_id:
-                resultado.append({
-                    "id": r.get('id'),
-                    "habilidad_id": r.get('habilidad_id'),
-                    "peso_kg": r.get('peso_kg'),
-                    "fecha_registro": r.get('fecha_registro')
-                })
-        return jsonify(resultado)
-    except Exception as e:
-        return jsonify([])
 
 @app.route('/cliente/rm', methods=['PUT'])
 def cliente_actualizar_rm():
@@ -707,45 +790,6 @@ def cliente_cancelar_reserva():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# ============================================
-# API PÚBLICA RM (sin autenticación)
-# ============================================
-@app.route('/api/rm', methods=['GET'])
-def api_obtener_rm():
-    email = request.args.get('email')
-    
-    if not email:
-        return jsonify([])
-    
-    try:
-        sheet_clientes = get_sheet("clientes")
-        clientes = sheet_clientes.get_all_records()
-        cliente_id = None
-        for c in clientes:
-            if c.get('email') == email:
-                cliente_id = c.get('id')
-                break
-        
-        if not cliente_id:
-            return jsonify([])
-        
-        sheet_rm = get_sheet("rm_records")
-        registros = sheet_rm.get_all_records()
-        
-        resultado = []
-        for r in registros:
-            if r.get('cliente_id') == cliente_id:
-                resultado.append({
-                    "id": r.get('id'),
-                    "habilidad_id": r.get('habilidad_id'),
-                    "peso_kg": r.get('peso_kg'),
-                    "fecha_registro": r.get('fecha_registro')
-                })
-        return jsonify(resultado)
-    except Exception as e:
-        return jsonify([])
-    
-    
 # ============================================
 # INICIAR SERVIDOR
 # ============================================
