@@ -122,7 +122,9 @@ async function cargarOtrosClientes(claseId) {
                 clase_id: claseId 
             })
         });
-        return await response.json();
+        const data = await response.json();
+        console.log('Otros clientes:', data); // Para depurar
+        return data;
     } catch (error) {
         console.error('Error cargar otros clientes:', error);
         return [];
@@ -133,6 +135,13 @@ async function verRMCliente(email, nombre) {
     const modal = document.getElementById('modalRM');
     const titulo = document.getElementById('modalTitulo');
     const lista = document.getElementById('modalRMLista');
+    
+    if (!email || email === 'undefined') {
+        lista.innerHTML = '<p style="color:#ff6666;">❌ No se pudo obtener el email del cliente</p>';
+        modal.style.display = 'flex';
+        titulo.innerHTML = `🏋️ Error`;
+        return;
+    }
     
     titulo.innerHTML = `🏋️ RM de ${nombre}`;
     lista.innerHTML = '<p>Cargando...</p>';
