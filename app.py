@@ -790,6 +790,87 @@ def cliente_cancelar_reserva():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+
+# ============================================
+# API ANUNCIOS (Administrador)
+# ============================================
+@app.route('/admin/anuncios', methods=['GET'])
+def admin_obtener_anuncios():
+    try:
+        sheet = get_sheet("anuncios")
+        registros = sheet.get_all_records()
+        return jsonify(registros)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/admin/anuncios', methods=['POST'])
+def admin_crear_anuncio():
+    try:
+        data = request.json
+        sheet = get_sheet("anuncios")
+        registros = sheet.get_all_records()
+        nuevo_id = len(registros) + 1
+        
+        from datetime import date
+        fecha_actual = date.today().isoformat()
+        
+        sheet.append_row([
+            nuevo_id,
+            data.get('titulo', ''),
+            data.get('texto', ''),
+            fecha_actual,
+            'TRUE'
+        ])
+        return jsonify({"mensaje": "Anuncio creado", "id": nuevo_id})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/admin/anuncios/<int:anuncio_id>', methods=['DELETE'])
+def admin_eliminar_anuncio(anuncio_id):
+    try:
+        sheet = get_sheet("anuncios")
+        registros = sheet.get_all_records()
+        for i, r in enumerate(registros, start=2):
+            if r.get('id') == anuncio_id:
+                sheet.delete_rows(i)
+                return jsonify({"mensaje": "Anuncio eliminado"})
+        return jsonify({"error": "No encontrado"}), 404
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/admin/anuncios/<int:anuncio_id>', methods=['PUT'])
+def admin_toggle_anuncio(anuncio_id):
+    """Activar/desactivar anuncio"""
+    try:
+        data = request.json
+        vigente = data.get('vigente', 'TRUE')
+        sheet = get_sheet("anuncios")
+        registros = sheet.get_all_records()
+        for i, r in enumerate(registros, start=2):
+            if r.get('id') == anuncio_id:
+                sheet.update_cell(i, 5, vigente)  # Columna E = vigente
+                return jsonify({"mensaje": "Anuncio actualizado"})
+        return jsonify({"error": "No encontrado"}), 404
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# ============================================
+# API CLIENTE - VER ANUNCIOS
+# ============================================
+@app.route('/cliente/anuncios', methods=['GET'])
+def cliente_obtener_anuncios():
+    try:
+        sheet = get_sheet("anuncios")
+        registros = sheet.get_all_records()
+        # Solo mostrar anuncios vigentes (TRUE) y ordenados por fecha descendente
+        vigentes = [a for a in registros if a.get('vigente') == 'TRUE']
+        vigentes.sort(key=lambda x: x.get('fecha_publicacion', ''), reverse=True)
+        return jsonify(vigentes)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+
 # ============================================
 # INICIAR SERVIDOR
 # ============================================

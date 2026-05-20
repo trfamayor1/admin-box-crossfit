@@ -9,7 +9,7 @@
         .header{ display:flex; justify-content:space-between; align-items:center; margin-bottom:30px; flex-wrap:wrap; gap:10px; }
         button{ background:#00aa55; color:white; border:none; padding:10px 20px; border-radius:10px; cursor:pointer; }
         .btn-salir{ background:#ff4d00; }
-        .card{ background:#1e1e1e; padding:30px; border-radius:25px; max-width:450px; margin:0 auto; }
+        .card{ background:#1e1e1e; padding:30px; border-radius:25px; max-width:500px; margin:0 auto; }
         .info{ margin:20px 0; line-height:1.8; }
         .error{ color:#ff6666; margin-top:15px; text-align:center; }
         h2{ text-align:center; margin-bottom:20px; }
@@ -21,6 +21,9 @@
         .campo-valor{ font-size:16px; }
         .foto-container{ text-align:center; margin-bottom:20px; }
         .foto-perfil{ width:120px; height:120px; border-radius:50%; object-fit:cover; margin:10px auto; background:#333; }
+        .anuncio{ background:#2a2a2a; padding:15px; border-radius:10px; margin-bottom:10px; border-left: 4px solid #ff4d00; }
+        .anuncio-titulo{ font-weight:bold; color:#ff4d00; margin-bottom:5px; }
+        .anuncio-fecha{ font-size:11px; color:#888; margin-top:8px; }
     </style>
 </head>
 <body>
@@ -50,14 +53,23 @@
     <p id="errorMsg" class="error"></p>
 </div>
 
+<div class="card" style="margin-top:20px;">
+    <div class="campo-label" style="margin-bottom:15px;">📢 Anuncios del Box</div>
+    <div id="anunciosContainer">
+        <p>Cargando anuncios...</p>
+    </div>
+</div>
+
 <script>
 const clienteEmail = localStorage.getItem('cliente_email');
 if (!clienteEmail) {
     window.location.href = '/cliente/login';
 }
 
+// ============================================
+// GENERAR AVATAR
+// ============================================
 function generarAvatar(nombre, email) {
-    // Obtener iniciales (máximo 2 letras)
     const palabras = nombre.split(' ');
     let iniciales = '';
     if (palabras.length >= 2) {
@@ -67,7 +79,6 @@ function generarAvatar(nombre, email) {
     }
     iniciales = iniciales.toUpperCase();
     
-    // Generar color consistente basado en el email
     let hash = 0;
     for (let i = 0; i < email.length; i++) {
         hash = ((hash << 5) - hash) + email.charCodeAt(i);
@@ -75,10 +86,12 @@ function generarAvatar(nombre, email) {
     }
     const hue = Math.abs(hash % 360);
     
-    const avatarUrl = `https://ui-avatars.com/api/?name=${iniciales}&background=hsl(${hue},70%,55%)&color=fff&size=120&bold=true&length=2&fontsize=0.5`;
-    return avatarUrl;
+    return `https://ui-avatars.com/api/?name=${iniciales}&background=hsl(${hue},70%,55%)&color=fff&size=120&bold=true&length=2&fontsize=0.5`;
 }
 
+// ============================================
+// CARGAR PERFIL
+// ============================================
 async function cargarPerfil() {
     const infoDiv = document.getElementById('info');
     const errorMsg = document.getElementById('errorMsg');
@@ -128,7 +141,6 @@ async function cargarPerfil() {
                 </div>
             `;
             
-            // Mostrar avatar con iniciales
             const avatarUrl = generarAvatar(data.nombre, data.email);
             document.getElementById('fotoPerfil').src = avatarUrl;
             
@@ -144,12 +156,50 @@ async function cargarPerfil() {
     }
 }
 
+// ============================================
+// CARGAR ANUNCIOS
+// ============================================
+async function cargarAnuncios() {
+    const container = document.getElementById('anunciosContainer');
+    try {
+        const response = await fetch('/cliente/anuncios');
+        const anuncios = await response.json();
+        
+        if (!anuncios || anuncios.length === 0) {
+            container.innerHTML = '<p style="color:#888;">No hay anuncios disponibles</p>';
+            return;
+        }
+        
+        let html = '';
+        for (const a of anuncios) {
+            html += `
+                <div class="anuncio">
+                    <div class="anuncio-titulo">📢 ${a.titulo || 'Sin título'}</div>
+                    <div>${a.texto || ''}</div>
+                    <div class="anuncio-fecha">📅 ${a.fecha_publicacion || ''}</div>
+                </div>
+            `;
+        }
+        container.innerHTML = html;
+    } catch (error) {
+        container.innerHTML = '<p style="color:#ff6666;">Error al cargar anuncios</p>';
+        console.error('Error anuncios:', error);
+    }
+}
+
+// ============================================
+// CERRAR SESIÓN
+// ============================================
 function cerrarSesion() {
     localStorage.removeItem('cliente_email');
     window.location.href = '/cliente/login';
 }
 
+// ============================================
+// INICIALIZAR
+// ============================================
 cargarPerfil();
+cargarAnuncios();
 </script>
 </body>
 </html>

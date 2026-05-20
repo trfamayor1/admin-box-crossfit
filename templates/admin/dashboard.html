@@ -22,7 +22,7 @@
         .cerrar{ float:right; cursor:pointer; font-size:24px; }
         .seccion{ background:#1e1e1e; padding:20px; border-radius:15px; margin-top:30px; }
         .input-group{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
-        .input-group input{ padding:10px; border-radius:8px; border:none; }
+        .input-group input{ padding:10px; border-radius:8px; border:none; flex:1; }
         h3{ margin-bottom:15px; color:#ff4d00; }
         .success{ background:#00aa55; padding:10px; border-radius:8px; margin-top:10px; display:none; }
         .error{ background:#ff4444; padding:10px; border-radius:8px; margin-top:10px; display:none; }
@@ -37,7 +37,7 @@
     </div>
 </div>
 
-<!-- Mensajes de éxito/error -->
+<!-- Mensajes -->
 <div id="successMsg" class="success"></div>
 <div id="errorMsg" class="error"></div>
 
@@ -75,6 +75,24 @@
     </div>
 </div>
 
+<!-- Sección Anuncios -->
+<div class="seccion">
+    <h3>📢 Anuncios</h3>
+    <div class="input-group">
+        <input type="text" id="anuncioTitulo" placeholder="Título" style="flex:2;">
+        <input type="text" id="anuncioTexto" placeholder="Texto del anuncio" style="flex:3;">
+        <button onclick="crearAnuncio()">Crear Anuncio</button>
+    </div>
+    <div style="margin-top:20px; overflow-x:auto;">
+        <table style="width:100%">
+            <thead>
+                <tr><th>Título</th><th>Texto</th><th>Fecha</th><th>Vigente</th><th>Acciones</th>
+            </thead>
+            <tbody id="anunciosBody"></tbody>
+        </table>
+    </div>
+</div>
+
 <!-- Modal Cliente -->
 <div id="modalCliente" class="modal">
     <div class="modal-content">
@@ -97,7 +115,7 @@
 
 <script>
 // ============================================
-// VERIFICAR ADMIN AUTORIZADO
+// VERIFICAR ADMIN
 // ============================================
 async function verificarAdmin() {
     const adminEmail = localStorage.getItem('admin_email');
@@ -120,12 +138,6 @@ async function verificarAdmin() {
     }
 }
 
-// ============================================
-// CLIENTES CRUD
-// ============================================
-let clientes = [];
-let membresias = [];
-
 function mostrarMensaje(mensaje, tipo) {
     const successDiv = document.getElementById('successMsg');
     const errorDiv = document.getElementById('errorMsg');
@@ -139,6 +151,12 @@ function mostrarMensaje(mensaje, tipo) {
         setTimeout(() => { errorDiv.style.display = 'none'; }, 3000);
     }
 }
+
+// ============================================
+// CLIENTES
+// ============================================
+let clientes = [];
+let membresias = [];
 
 async function cargarClientes() {
     const res = await fetch('/admin/clientes');
@@ -174,7 +192,7 @@ function mostrarClientes() {
                 <td>
                     <button onclick="editarCliente(${c.id})" class="btn">✏️</button>
                     <button onclick="eliminarCliente(${c.id})" class="btn">🗑️</button>
-                </td>
+                 </td>
             </tr>
         `;
     });
@@ -239,14 +257,13 @@ async function guardarCliente() {
                 body: JSON.stringify(datos)
             });
         }
-        
         const data = await res.json();
         if (res.ok) {
             mostrarMensaje(data.mensaje, 'success');
             cerrarModal();
             cargarClientes();
         } else {
-            mostrarMensaje(data.error || 'Error al guardar cliente', 'error');
+            mostrarMensaje(data.error || 'Error al guardar', 'error');
         }
     } catch (error) {
         mostrarMensaje('Error de conexión', 'error');
@@ -314,21 +331,103 @@ async function cargarClases() {
                 <td style="color: ${disponibles > 0 ? '#66ff66' : '#ff6666'}">${disponibles}</td>
                 <td>
                     <button onclick="eliminarClase(${c.id})" class="btn-eliminar">🗑️ Eliminar</button>
-                </td>
+                 </td>
             </tr>
         `;
     });
 }
 
 async function eliminarClase(id) {
-    if (confirm('¿Eliminar esta clase? Se perderán todas las reservas asociadas.')) {
+    if (confirm('¿Eliminar esta clase?')) {
         const res = await fetch(`/admin/clases/${id}`, { method: 'DELETE' });
         const data = await res.json();
         if (res.ok) {
             mostrarMensaje(data.mensaje, 'success');
             cargarClases();
         } else {
-            mostrarMensaje(data.error || 'Error al eliminar clase', 'error');
+            mostrarMensaje(data.error || 'Error al eliminar', 'error');
+        }
+    }
+}
+
+// ============================================
+// ANUNCIOS
+// ============================================
+async function cargarAnuncios() {
+    const res = await fetch('/admin/anuncios');
+    const anuncios = await res.json();
+    const tbody = document.getElementById('anunciosBody');
+    tbody.innerHTML = '';
+    
+    anuncios.forEach(a => {
+        tbody.innerHTML += `
+            <tr>
+                <td><strong>${a.titulo || ''}</strong></td>
+                <td>${a.texto || ''}</td>
+                <td>${a.fecha_publicacion || ''}</td>
+                <td>
+                    <button onclick="toggleAnuncio(${a.id}, '${a.vigente}')" 
+                        style="background: ${a.vigente == 'TRUE' ? '#00aa55' : '#ff4444'}; padding:5px 10px;">
+                        ${a.vigente == 'TRUE' ? '✅ Activo' : '❌ Inactivo'}
+                    </button>
+                 </td>
+                <td>
+                    <button onclick="eliminarAnuncio(${a.id})" class="btn-eliminar">🗑️ Eliminar</button>
+                 </td>
+            </tr>
+        `;
+    });
+}
+
+async function crearAnuncio() {
+    const titulo = document.getElementById('anuncioTitulo').value;
+    const texto = document.getElementById('anuncioTexto').value;
+    
+    if (!titulo || !texto) {
+        mostrarMensaje("Completa título y texto", 'error');
+        return;
+    }
+    
+    const res = await fetch('/admin/anuncios', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ titulo, texto })
+    });
+    
+    const data = await res.json();
+    if (res.ok) {
+        mostrarMensaje(data.mensaje, 'success');
+        document.getElementById('anuncioTitulo').value = '';
+        document.getElementById('anuncioTexto').value = '';
+        cargarAnuncios();
+    } else {
+        mostrarMensaje(data.error, 'error');
+    }
+}
+
+async function toggleAnuncio(id, vigenteActual) {
+    const nuevaVigencia = vigenteActual == 'TRUE' ? 'FALSE' : 'TRUE';
+    const res = await fetch(`/admin/anuncios/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ vigente: nuevaVigencia })
+    });
+    
+    if (res.ok) {
+        cargarAnuncios();
+    } else {
+        mostrarMensaje('Error al actualizar', 'error');
+    }
+}
+
+async function eliminarAnuncio(id) {
+    if (confirm('¿Eliminar este anuncio?')) {
+        const res = await fetch(`/admin/anuncios/${id}`, { method: 'DELETE' });
+        if (res.ok) {
+            mostrarMensaje('Anuncio eliminado', 'success');
+            cargarAnuncios();
+        } else {
+            mostrarMensaje('Error al eliminar', 'error');
         }
     }
 }
@@ -348,6 +447,7 @@ verificarAdmin().then(() => {
     cargarMembresias();
     cargarClientes();
     cargarClases();
+    cargarAnuncios();
 });
 </script>
 </body>
