@@ -9,7 +9,7 @@
    ============================================ */
 
 /* ============================================
-   VARIABLES CSS (para usar en todo el proyecto)
+   VARIABLES CSS
    ============================================ */
 :root {
     /* Colores principales */
@@ -194,6 +194,44 @@ button:hover {
     box-shadow: none;
 }
 
+/* Botón ver perfil */
+.btn-ver {
+    background: transparent;
+    border: 1px solid var(--primary);
+    color: var(--primary);
+    padding: 5px 12px;
+    font-size: 0.8rem;
+}
+
+.btn-ver:hover {
+    background: var(--primary);
+    color: var(--bg-primary);
+}
+
+/* Botón editar */
+.btn-editar {
+    background: #3b82f6;
+    color: white;
+    padding: 5px 12px;
+    font-size: 0.8rem;
+}
+
+.btn-editar:hover {
+    background: #2563eb;
+}
+
+/* Botón eliminar */
+.btn-eliminar {
+    background: #dc2626;
+    color: white;
+    padding: 5px 12px;
+    font-size: 0.8rem;
+}
+
+.btn-eliminar:hover {
+    background: #b91c1c;
+}
+
 /* ============================================
    INPUTS Y FORMULARIOS
    ============================================ */
@@ -218,8 +256,20 @@ input::placeholder, textarea::placeholder {
     color: var(--text-disabled);
 }
 
+/* Input group (fila de inputs) */
+.input-group {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.input-group input, .input-group select {
+    flex: 1;
+}
+
 /* ============================================
-   TABLAS
+   TABLAS (Desktop)
    ============================================ */
 table {
     width: 100%;
@@ -246,6 +296,13 @@ td {
 
 tr:hover td {
     background: rgba(240, 233, 29, 0.05);
+}
+
+/* Contenedor de acciones en tablas */
+td .acciones {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
 }
 
 /* ============================================
@@ -284,6 +341,18 @@ tr:hover td {
         opacity: 1;
         transform: scale(1);
     }
+}
+
+.cerrar {
+    float: right;
+    cursor: pointer;
+    font-size: 24px;
+    color: var(--text-secondary);
+    transition: color var(--transition-fast);
+}
+
+.cerrar:hover {
+    color: var(--primary);
 }
 
 /* ============================================
@@ -328,52 +397,177 @@ tr:hover td {
 .text-center { text-align: center; }
 .text-primary { color: var(--primary); }
 .text-secondary { color: var(--text-secondary); }
+
 .mt-2 { margin-top: 10px; }
 .mt-3 { margin-top: 15px; }
 .mt-4 { margin-top: 20px; }
+
 .mb-2 { margin-bottom: 10px; }
 .mb-3 { margin-bottom: 15px; }
 .mb-4 { margin-bottom: 20px; }
 
 /* ============================================
-   RESPONSIVE
+   SECCIONES
+   ============================================ */
+.seccion {
+    background: var(--bg-surface);
+    padding: 20px;
+    border-radius: var(--radius-lg);
+    margin-top: 30px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* ============================================
+   FOTO DE PERFIL
+   ============================================ */
+.foto-container {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.foto-perfil {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin: 10px auto;
+    background: var(--bg-surface);
+    border: 3px solid var(--primary);
+}
+
+/* ============================================
+   RESPONSIVE - MÓVIL VERTICAL
    ============================================ */
 @media (max-width: 768px) {
     body {
-        padding: 16px;
+        padding: 12px;
     }
     
     h1 { font-size: 1.5rem; }
     h2 { font-size: 1.25rem; }
     
     .card {
-        padding: 18px;
+        padding: 16px;
     }
     
     button {
-        padding: 10px 20px;
+        padding: 10px 16px;
+        font-size: 0.85rem;
     }
     
+    /* TABLAS RESPONSIVAS */
     table, thead, tbody, th, td, tr {
         display: block;
     }
     
-    th {
-        display: none;
+    /* Ocultar cabeceras */
+    thead tr {
+        position: absolute;
+        top: -9999px;
+        left: -9999px;
     }
     
+    /* Cada fila como tarjeta */
+    tr {
+        margin-bottom: 16px;
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-md);
+        overflow: hidden;
+        background: var(--bg-card);
+    }
+    
+    /* Cada celda como bloque */
     td {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 12px;
+        padding: 12px 16px;
         border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        text-align: right;
+        gap: 10px;
     }
     
+    /* Eliminar borde del último */
+    td:last-child {
+        border-bottom: none;
+    }
+    
+    /* Etiqueta antes de cada valor */
     td::before {
         content: attr(data-label);
         font-weight: 600;
         color: var(--primary);
-        width: 40%;
+        text-align: left;
+        flex: 1;
+        font-size: 0.85rem;
+    }
+    
+    /* Ajuste de inputs en móvil */
+    input, select {
+        padding: 12px 14px;
+        font-size: 16px;
+    }
+    
+    /* Ajuste de navegación */
+    nav {
+        border-radius: var(--radius-lg);
+        padding: 6px 12px;
+        gap: 8px;
+    }
+    
+    nav a {
+        padding: 6px 12px;
+        font-size: 0.8rem;
+    }
+    
+    /* Ajuste de grupos de input */
+    .input-group {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .input-group input, .input-group button {
+        width: 100%;
+    }
+    
+    /* Ajuste de acciones */
+    td .acciones {
+        justify-content: flex-end;
+    }
+    
+    /* Modal en móvil */
+    .modal-content {
+        padding: 20px;
+        width: 95%;
+    }
+}
+
+/* ============================================
+   RESPONSIVE - TABLET
+   ============================================ */
+@media (min-width: 769px) and (max-width: 1024px) {
+    .container {
+        padding: 16px;
+    }
+    
+    table {
+        font-size: 0.85rem;
+    }
+    
+    th, td {
+        padding: 10px 12px;
+    }
+}
+
+/* ============================================
+   RESPONSIVE - PANTALLAS GRANDES
+   ============================================ */
+@media (min-width: 1200px) {
+    .container {
+        max-width: 1400px;
+    }
+    
+    body {
+        font-size: 16px;
     }
 }

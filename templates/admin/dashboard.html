@@ -1,81 +1,184 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Dashboard - Admin Box</title>
+    <title>Dashboard - Machine Box Admin</title>
     <link rel="manifest" href="/ADMIN/manifest.json">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-
+    
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
-    <!-- Estilos globales -->
+    
+    <!-- Estilos globales Machine -->
     <link rel="stylesheet" href="/static/css/style.css">
+    
+    <style>
+        /* Estilos adicionales específicos del dashboard */
+        .stats-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: var(--bg-surface);
+            border-radius: var(--radius-lg);
+            padding: 20px;
+            text-align: center;
+            border: 1px solid var(--border-color);
+            transition: all var(--transition-normal);
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-4px);
+            border-color: var(--border-glow);
+            box-shadow: var(--shadow-glow);
+        }
+        
+        .stat-card i {
+            font-size: 2rem;
+            color: var(--primary);
+            margin-bottom: 10px;
+        }
+        
+        .stat-card .value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+        
+        .stat-card .label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-top: 5px;
+        }
+        
+        .btn-ver {
+            background: transparent;
+            border: 1px solid var(--primary);
+            color: var(--primary);
+            padding: 6px 12px;
+            border-radius: var(--radius-full);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+        }
+        
+        .btn-ver:hover {
+            background: var(--primary);
+            color: var(--bg-primary);
+        }
+    </style>
 </head>
 <body>
-<div class="header">
-    <h2>🏋️ Panel de Administración</h2>
-    <div>
-        <button class="btn-agregar" onclick="abrirModalCliente()">+ Nuevo Cliente</button>
-        <button onclick="cerrarSesion()">Salir</button>
+<div class="container">
+    <div class="header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; flex-wrap: wrap; gap: 15px;">
+        <h2><i class="fas fa-dumbbell" style="color: var(--primary);"></i> Machine Box Admin</h2>
+        <div style="display: flex; gap: 10px;">
+            <button class="btn-agregar" onclick="abrirModalCliente()" style="background: var(--primary); color: var(--bg-primary);">
+                <i class="fas fa-user-plus"></i> Nuevo Cliente
+            </button>
+            <button onclick="cerrarSesion()" class="btn-salir">
+                <i class="fas fa-sign-out-alt"></i> Salir
+            </button>
+        </div>
     </div>
-</div>
 
-<!-- Mensajes -->
-<div id="successMsg" class="success"></div>
-<div id="errorMsg" class="error"></div>
-
-<!-- Sección Clientes -->
-<h3>📋 Clientes</h3>
-<div style="overflow-x:auto;">
-    <table id="tablaClientes">
-        <thead>
-            <tr><th>ID</th><th>Nombre</th><th>Email</th><th>Celular</th><th>Membresía</th><th>Clases Rest.</th><th>Vencimiento</th><th>Activo</th><th>Acciones</th></tr>
-        </thead>
-        <tbody id="clientesBody"></tbody>
-    </table>
-</div>
-
-<!-- Sección Clases -->
-<div class="seccion">
-    <h3>📅 Crear Clase</h3>
-    <div class="input-group">
-        <input type="date" id="clase_fecha">
-        <input type="time" id="clase_hora">
-        <input type="number" id="clase_cupos" placeholder="Cupos" style="width:100px">
-        <button onclick="crearClase()">Crear Clase</button>
+    <!-- Tarjetas de estadísticas -->
+    <div class="stats-cards">
+        <div class="stat-card">
+            <i class="fas fa-users"></i>
+            <div class="value" id="totalClientes">0</div>
+            <div class="label">Total Clientes</div>
+        </div>
+        <div class="stat-card">
+            <i class="fas fa-calendar-check"></i>
+            <div class="value" id="totalReservasHoy">0</div>
+            <div class="label">Reservas Hoy</div>
+        </div>
+        <div class="stat-card">
+            <i class="fas fa-chalkboard-user"></i>
+            <div class="value" id="totalClasesActivas">0</div>
+            <div class="label">Clases Activas</div>
+        </div>
     </div>
-</div>
 
-<div class="seccion">
-    <h3>📋 Clases Programadas</h3>
-    <div style="overflow-x:auto;">
-        <table style="width:100%">
+    <!-- Sección Clientes -->
+    <h3><i class="fas fa-users" style="color: var(--primary);"></i> Clientes</h3>
+    <div style="overflow-x: auto;">
+        <table id="tablaClientes">
             <thead>
-                <tr><th>Fecha</th><th>Hora</th><th>Cupos</th><th>Reservados</th><th>Disponibles</th><th>Acciones</th>
+                <tr>
+                    <th>ID</th>
+                    <th>Nombre</th>
+                    <th>Email</th>
+                    <th>Celular</th>
+                    <th>Membresía</th>
+                    <th>Clases Rest.</th>
+                    <th>Vencimiento</th>
+                    <th>Activo</th>
+                    <th>Acciones</th>
+                </tr>
             </thead>
-            <tbody id="clasesBody"></tbody>
+            <tbody id="clientesBody"></tbody>
         </table>
     </div>
-</div>
 
-<!-- Sección Anuncios -->
-<div class="seccion">
-    <h3>📢 Anuncios</h3>
-    <div class="input-group">
-        <input type="text" id="anuncioTitulo" placeholder="Título" style="flex:2;">
-        <input type="text" id="anuncioTexto" placeholder="Texto del anuncio" style="flex:3;">
-        <button onclick="crearAnuncio()">Crear Anuncio</button>
+    <!-- Sección Clases -->
+    <div class="seccion">
+        <h3><i class="fas fa-calendar-alt" style="color: var(--primary);"></i> Crear Clase</h3>
+        <div class="input-group">
+            <input type="date" id="clase_fecha">
+            <input type="time" id="clase_hora">
+            <input type="number" id="clase_cupos" placeholder="Cupos" style="width:100px">
+            <button onclick="crearClase()"><i class="fas fa-plus"></i> Crear Clase</button>
+        </div>
     </div>
-    <div style="margin-top:20px; overflow-x:auto;">
-        <table style="width:100%">
-            <thead>
-                <tr><th>Título</th><th>Texto</th><th>Fecha</th><th>Vigente</th><th>Acciones</th>
-            </thead>
-            <tbody id="anunciosBody"></tbody>
-        </table>
+
+    <div class="seccion">
+        <h3><i class="fas fa-list"></i> Clases Programadas</h3>
+        <div style="overflow-x: auto;">
+            <table style="width:100%">
+                <thead>
+                    <tr>
+                        <th>Fecha</th>
+                        <th>Hora</th>
+                        <th>Cupos</th>
+                        <th>Reservados</th>
+                        <th>Disponibles</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="clasesBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Sección Anuncios -->
+    <div class="seccion">
+        <h3><i class="fas fa-bullhorn" style="color: var(--primary);"></i> Anuncios</h3>
+        <div class="input-group">
+            <input type="text" id="anuncioTitulo" placeholder="Título">
+            <input type="text" id="anuncioTexto" placeholder="Texto del anuncio">
+            <button onclick="crearAnuncio()"><i class="fas fa-plus"></i> Crear Anuncio</button>
+        </div>
+        <div style="margin-top:20px; overflow-x:auto;">
+            <table style="width:100%">
+                <thead>
+                    <tr>
+                        <th>Título</th>
+                        <th>Texto</th>
+                        <th>Fecha</th>
+                        <th>Vigente</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="anunciosBody"></tbody>
+            </table>
+        </div>
     </div>
 </div>
 
@@ -83,7 +186,7 @@
 <div id="modalCliente" class="modal">
     <div class="modal-content">
         <span class="cerrar" onclick="cerrarModal()">&times;</span>
-        <h3 id="modalTitulo">Nuevo Cliente</h3>
+        <h3 id="modalTitulo"><i class="fas fa-user"></i> Nuevo Cliente</h3>
         <input type="hidden" id="clienteId">
         <input type="text" id="nombre" placeholder="Nombre completo">
         <input type="email" id="email" placeholder="Email">
@@ -95,7 +198,7 @@
             <option value="TRUE">Activo</option>
             <option value="FALSE">Inactivo</option>
         </select>
-        <button onclick="guardarCliente()">Guardar</button>
+        <button onclick="guardarCliente()"><i class="fas fa-save"></i> Guardar</button>
     </div>
 </div>
 
@@ -125,17 +228,18 @@ async function verificarAdmin() {
 }
 
 function mostrarMensaje(mensaje, tipo) {
-    const successDiv = document.getElementById('successMsg');
-    const errorDiv = document.getElementById('errorMsg');
-    if (tipo === 'success') {
-        successDiv.style.display = 'block';
-        successDiv.innerHTML = mensaje;
-        setTimeout(() => { successDiv.style.display = 'none'; }, 3000);
-    } else {
-        errorDiv.style.display = 'block';
-        errorDiv.innerHTML = mensaje;
-        setTimeout(() => { errorDiv.style.display = 'none'; }, 3000);
-    }
+    // Crear toast temporal
+    const toast = document.createElement('div');
+    toast.className = tipo === 'success' ? 'success' : 'error';
+    toast.innerHTML = mensaje;
+    toast.style.position = 'fixed';
+    toast.style.bottom = '20px';
+    toast.style.left = '50%';
+    toast.style.transform = 'translateX(-50%)';
+    toast.style.zIndex = '2000';
+    toast.style.minWidth = '200px';
+    document.body.appendChild(toast);
+    setTimeout(() => { toast.remove(); }, 3000);
 }
 
 // ============================================
@@ -148,6 +252,7 @@ async function cargarClientes() {
     const res = await fetch('/admin/clientes');
     clientes = await res.json();
     mostrarClientes();
+    actualizarEstadisticas();
 }
 
 async function cargarMembresias() {
@@ -156,7 +261,7 @@ async function cargarMembresias() {
     const select = document.getElementById('membresiaId');
     select.innerHTML = '';
     membresias.forEach(m => {
-        select.innerHTML += `<option value="${m.id}">${m.nombre} (${m.clases_por_mes} clases/mes - $${m.precio})</option>`;
+        select.innerHTML += `<option value="${m.id}">${m.nombre} (${m.clases_por_mes} clases/mes)</option>`;
     });
 }
 
@@ -167,20 +272,22 @@ function mostrarClientes() {
         const membresia = membresias.find(m => m.id == c.membresia_id);
         tbody.innerHTML += `
             <tr>
-                <td>${c.id}</td>
-                <td>${c.nombre || ''}</td>
-                <td>${c.email || ''}</td>
-                <td>${c.celular || ''}</td>
-                <td>${membresia ? membresia.nombre : 'Sin membresía'}</td>
-                <td style="color: ${(c.clases_restantes_mes || 0) > 0 ? '#66ff66' : '#ff6666'}">${c.clases_restantes_mes || 0}</td>
-                <td>${c.fecha_vencimiento || ''}</td>
-                <td>${c.activo == 'TRUE' ? '✅' : '❌'}</td>
-                <td>
-                    <button onclick="verPerfilCliente('${c.email}')" class="btn-ver" style="background:#00aa55;">👤</button>
-                    <button onclick="editarCliente(${c.id})" class="btn">✏️</button>
-                    <button onclick="eliminarCliente(${c.id})" class="btn">🗑️</button>
-                 </td>
-            </table>
+                <td data-label="ID">${c.id}</td>
+                <td data-label="Nombre">${c.nombre || ''}</td>
+                <td data-label="Email">${c.email || ''}</td>
+                <td data-label="Celular">${c.celular || ''}</td>
+                <td data-label="Membresía">${membresia ? membresia.nombre : 'Sin membresía'}</td>
+                <td data-label="Clases Rest.">${c.clases_restantes_mes || 0}</td>
+                <td data-label="Vencimiento">${c.fecha_vencimiento || ''}</td>
+                <td data-label="Estado">${c.activo == 'TRUE' ? '✅ Activo' : '❌ Inactivo'}</td>
+                <td data-label="Acciones">
+                    <div class="acciones">
+                        <button class="btn-ver" onclick="verPerfilCliente('${c.email}')"><i class="fas fa-eye"></i></button>
+                        <button class="btn-editar" onclick="editarCliente(${c.id})"><i class="fas fa-edit"></i></button>
+                        <button class="btn-eliminar" onclick="eliminarCliente(${c.id})"><i class="fas fa-trash"></i></button>
+                    </div>
+                </td>
+            </tr>
         `;
     });
 }
@@ -189,8 +296,13 @@ function verPerfilCliente(email) {
     window.location.href = `/admin/cliente_perfil?email=${encodeURIComponent(email)}`;
 }
 
+function actualizarEstadisticas() {
+    document.getElementById('totalClientes').innerText = clientes.length;
+    // Las demás estadísticas se pueden agregar después
+}
+
 function abrirModalCliente() {
-    document.getElementById('modalTitulo').innerText = 'Nuevo Cliente';
+    document.getElementById('modalTitulo').innerHTML = '<i class="fas fa-user-plus"></i> Nuevo Cliente';
     document.getElementById('clienteId').value = '';
     document.getElementById('nombre').value = '';
     document.getElementById('email').value = '';
@@ -204,7 +316,7 @@ function abrirModalCliente() {
 function editarCliente(id) {
     const cliente = clientes.find(c => c.id == id);
     if (!cliente) return;
-    document.getElementById('modalTitulo').innerText = 'Editar Cliente';
+    document.getElementById('modalTitulo').innerHTML = '<i class="fas fa-user-edit"></i> Editar Cliente';
     document.getElementById('clienteId').value = cliente.id;
     document.getElementById('nombre').value = cliente.nombre || '';
     document.getElementById('email').value = cliente.email || '';
@@ -311,18 +423,21 @@ async function cargarClases() {
     const tbody = document.getElementById('clasesBody');
     tbody.innerHTML = '';
     
+    // Actualizar contador de clases activas
+    document.getElementById('totalClasesActivas').innerText = clases.length;
+    
     clases.forEach(c => {
         const disponibles = (c.cupos_maximos || 0) - (c.cupos_ocupados || 0);
         tbody.innerHTML += `
             <tr>
-                <td>${c.fecha}</td>
-                <td>${c.hora}</td>
-                <td>${c.cupos_maximos}</td>
-                <td>${c.cupos_ocupados || 0}</td>
-                <td style="color: ${disponibles > 0 ? '#66ff66' : '#ff6666'}">${disponibles}</td>
-                <td>
-                    <button onclick="eliminarClase(${c.id})" class="btn-eliminar">🗑️ Eliminar</button>
-                 </td>
+                <td data-label="Fecha">${c.fecha}</td>
+                <td data-label="Hora">${c.hora}</td>
+                <td data-label="Cupos">${c.cupos_maximos}</td>
+                <td data-label="Reservados">${c.cupos_ocupados || 0}</td>
+                <td data-label="Disponibles" style="color: ${disponibles > 0 ? '#10b981' : '#dc2626'}">${disponibles}</td>
+                <td data-label="Acciones">
+                    <button class="btn-eliminar" onclick="eliminarClase(${c.id})"><i class="fas fa-trash"></i></button>
+                </td>
             </tr>
         `;
     });
@@ -353,18 +468,18 @@ async function cargarAnuncios() {
     anuncios.forEach(a => {
         tbody.innerHTML += `
             <tr>
-                <td><strong>${a.titulo || ''}</strong></td>
-                <td>${a.texto || ''}</td>
-                <td>${a.fecha_publicacion || ''}</td>
-                <td>
+                <td data-label="Título"><strong>${a.titulo || ''}</strong></td>
+                <td data-label="Texto">${a.texto || ''}</td>
+                <td data-label="Fecha">${a.fecha_publicacion || ''}</td>
+                <td data-label="Vigente">
                     <button onclick="toggleAnuncio(${a.id}, '${a.vigente}')" 
-                        style="background: ${a.vigente == 'TRUE' ? '#00aa55' : '#ff4444'}; padding:5px 10px;">
+                        style="background: ${a.vigente == 'TRUE' ? '#10b981' : '#dc2626'}; padding:5px 10px; border-radius:20px;">
                         ${a.vigente == 'TRUE' ? '✅ Activo' : '❌ Inactivo'}
                     </button>
-                 </td>
-                <td>
-                    <button onclick="eliminarAnuncio(${a.id})" class="btn-eliminar">🗑️ Eliminar</button>
-                 </td>
+                </td>
+                <td data-label="Acciones">
+                    <button class="btn-eliminar" onclick="eliminarAnuncio(${a.id})"><i class="fas fa-trash"></i></button>
+                </td>
             </tr>
         `;
     });
@@ -406,13 +521,11 @@ async function toggleAnuncio(id, vigenteActual) {
             body: JSON.stringify({ vigente: nuevaVigencia })
         });
         
-        const data = await res.json();
-        
         if (res.ok) {
-            mostrarMensaje(data.mensaje, 'success');
+            mostrarMensaje('Anuncio actualizado', 'success');
             cargarAnuncios();
         } else {
-            mostrarMensaje(data.error || 'Error al actualizar', 'error');
+            mostrarMensaje('Error al actualizar', 'error');
         }
     } catch (error) {
         mostrarMensaje('Error de conexión', 'error');
