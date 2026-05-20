@@ -1010,6 +1010,10 @@ def cliente_cancelar_reserva():
 def serve_manifest():
     return send_from_directory('.', 'manifest.json')
 
+@app.route('/sw.js')
+def serve_sw():
+    return send_from_directory('.', 'sw.js')
+
 
 # ============================================
 # INICIAR SERVIDOR
