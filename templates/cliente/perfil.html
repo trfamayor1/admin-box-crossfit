@@ -1,189 +1,448 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Mi Perfil - Mi Box</title>
+    <title>Dashboard - Admin Box</title>
+    <link rel="manifest" href="/ADMIN/manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
         *{ margin:0; padding:0; box-sizing:border-box; }
         body{ background:#111; color:white; font-family:Arial; padding:20px; }
         .header{ display:flex; justify-content:space-between; align-items:center; margin-bottom:30px; flex-wrap:wrap; gap:10px; }
-        button{ background:#00aa55; color:white; border:none; padding:10px 20px; border-radius:10px; cursor:pointer; }
-        .btn-salir{ background:#ff4d00; }
-        .card{ background:#1e1e1e; padding:30px; border-radius:25px; max-width:500px; margin:0 auto; }
-        .info{ margin:20px 0; line-height:1.8; }
-        .error{ color:#ff6666; margin-top:15px; text-align:center; }
-        h2{ text-align:center; margin-bottom:20px; }
-        nav{ display:flex; gap:15px; margin-bottom:20px; flex-wrap:wrap; justify-content:center; }
-        nav a{ color:white; text-decoration:none; padding:10px; border-radius:10px; background:#333; }
-        nav a:hover{ background:#ff4d00; }
-        .campo{ margin:15px 0; padding:10px; background:#2a2a2a; border-radius:10px; }
-        .campo-label{ color:#ff4d00; font-weight:bold; margin-bottom:5px; }
-        .campo-valor{ font-size:16px; }
-        .foto-container{ text-align:center; margin-bottom:20px; }
-        .foto-perfil{ width:120px; height:120px; border-radius:50%; object-fit:cover; margin:10px auto; background:#333; }
-        .anuncio{ background:#2a2a2a; padding:15px; border-radius:10px; margin-bottom:10px; border-left: 4px solid #ff4d00; }
-        .anuncio-titulo{ font-weight:bold; color:#ff4d00; margin-bottom:5px; }
-        .anuncio-fecha{ font-size:11px; color:#888; margin-top:8px; }
+        button{ background:#ff4d00; color:white; border:none; padding:10px 20px; border-radius:10px; cursor:pointer; }
+        .btn{ background:#333; padding:8px 12px; margin:0 2px; }
+        .btn-agregar{ background:#00aa55; }
+        .btn-eliminar{ background:#ff4444; padding:5px 10px; border-radius:5px; cursor:pointer; }
+        .btn-ver{ background:#00aa55; padding:5px 10px; border-radius:5px; }
+        table{ width:100%; border-collapse:collapse; margin-top:20px; }
+        th, td{ padding:12px; text-align:left; border-bottom:1px solid #333; }
+        th{ background:#1e1e1e; }
+        .modal{ display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); justify-content:center; align-items:center; z-index:1000; }
+        .modal-content{ background:#1e1e1e; padding:30px; border-radius:20px; width:90%; max-width:450px; }
+        .modal-content input, .modal-content select{ width:100%; padding:10px; margin:8px 0; border-radius:8px; border:none; }
+        .cerrar{ float:right; cursor:pointer; font-size:24px; }
+        .seccion{ background:#1e1e1e; padding:20px; border-radius:15px; margin-top:30px; }
+        .input-group{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+        .input-group input{ padding:10px; border-radius:8px; border:none; flex:1; }
+        h3{ margin-bottom:15px; color:#ff4d00; }
+        .success{ background:#00aa55; padding:10px; border-radius:8px; margin-top:10px; display:none; }
+        .error{ background:#ff4444; padding:10px; border-radius:8px; margin-top:10px; display:none; }
     </style>
 </head>
 <body>
 <div class="header">
-    <h2>🏋️ Mi Perfil</h2>
-    <button class="btn-salir" onclick="cerrarSesion()">Salir</button>
-</div>
-
-<nav>
-    <a href="/cliente/perfil">Mi Perfil</a>
-    <a href="/cliente/clases">Clases</a>
-    <a href="/cliente/mis-reservas">Mis Reservas</a>
-    <a href="/cliente/rm">Mis RM</a>
-</nav>
-
-<div class="card">
-    <!-- Avatar con iniciales -->
-    <div class="foto-container">
-        <div class="campo-label">👤 Identificación</div>
-        <img id="fotoPerfil" class="foto-perfil" src="" alt="Avatar">
-        <p style="font-size:12px; color:#888; margin-top:5px;">
-            Identificación visual con tus iniciales
-        </p>
+    <h2>🏋️ Panel de Administración</h2>
+    <div>
+        <button class="btn-agregar" onclick="abrirModalCliente()">+ Nuevo Cliente</button>
+        <button onclick="cerrarSesion()">Salir</button>
     </div>
-
-    <div id="info" class="info">Cargando...</div>
-    <p id="errorMsg" class="error"></p>
 </div>
 
-<div class="card" style="margin-top:20px;">
-    <div class="campo-label" style="margin-bottom:15px;">📢 Anuncios del Box</div>
-    <div id="anunciosContainer">
-        <p>Cargando anuncios...</p>
+<!-- Mensajes -->
+<div id="successMsg" class="success"></div>
+<div id="errorMsg" class="error"></div>
+
+<!-- Sección Clientes -->
+<h3>📋 Clientes</h3>
+<div style="overflow-x:auto;">
+    <table id="tablaClientes">
+        <thead>
+            <tr><th>ID</th><th>Nombre</th><th>Email</th><th>Celular</th><th>Membresía</th><th>Clases Rest.</th><th>Vencimiento</th><th>Activo</th><th>Acciones</th></tr>
+        </thead>
+        <tbody id="clientesBody"></tbody>
+    </table>
+</div>
+
+<!-- Sección Clases -->
+<div class="seccion">
+    <h3>📅 Crear Clase</h3>
+    <div class="input-group">
+        <input type="date" id="clase_fecha">
+        <input type="time" id="clase_hora">
+        <input type="number" id="clase_cupos" placeholder="Cupos" style="width:100px">
+        <button onclick="crearClase()">Crear Clase</button>
+    </div>
+</div>
+
+<div class="seccion">
+    <h3>📋 Clases Programadas</h3>
+    <div style="overflow-x:auto;">
+        <table style="width:100%">
+            <thead>
+                <tr><th>Fecha</th><th>Hora</th><th>Cupos</th><th>Reservados</th><th>Disponibles</th><th>Acciones</th>
+            </thead>
+            <tbody id="clasesBody"></tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Sección Anuncios -->
+<div class="seccion">
+    <h3>📢 Anuncios</h3>
+    <div class="input-group">
+        <input type="text" id="anuncioTitulo" placeholder="Título" style="flex:2;">
+        <input type="text" id="anuncioTexto" placeholder="Texto del anuncio" style="flex:3;">
+        <button onclick="crearAnuncio()">Crear Anuncio</button>
+    </div>
+    <div style="margin-top:20px; overflow-x:auto;">
+        <table style="width:100%">
+            <thead>
+                <tr><th>Título</th><th>Texto</th><th>Fecha</th><th>Vigente</th><th>Acciones</th>
+            </thead>
+            <tbody id="anunciosBody"></tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal Cliente -->
+<div id="modalCliente" class="modal">
+    <div class="modal-content">
+        <span class="cerrar" onclick="cerrarModal()">&times;</span>
+        <h3 id="modalTitulo">Nuevo Cliente</h3>
+        <input type="hidden" id="clienteId">
+        <input type="text" id="nombre" placeholder="Nombre completo">
+        <input type="email" id="email" placeholder="Email">
+        <input type="text" id="celular" placeholder="Celular">
+        <input type="text" id="eps" placeholder="EPS">
+        <select id="membresiaId"></select>
+        <input type="date" id="fechaVencimiento">
+        <select id="activo">
+            <option value="TRUE">Activo</option>
+            <option value="FALSE">Inactivo</option>
+        </select>
+        <button onclick="guardarCliente()">Guardar</button>
     </div>
 </div>
 
 <script>
-const clienteEmail = localStorage.getItem('cliente_email');
-if (!clienteEmail) {
-    window.location.href = '/cliente/login';
-}
-
 // ============================================
-// GENERAR AVATAR
+// VERIFICAR ADMIN
 // ============================================
-function generarAvatar(nombre, email) {
-    const palabras = nombre.split(' ');
-    let iniciales = '';
-    if (palabras.length >= 2) {
-        iniciales = palabras[0][0] + palabras[1][0];
-    } else {
-        iniciales = palabras[0].substring(0, 2);
+async function verificarAdmin() {
+    const adminEmail = localStorage.getItem('admin_email');
+    if (!adminEmail) {
+        window.location.href = '/admin/login';
+        return;
     }
-    iniciales = iniciales.toUpperCase();
-    
-    let hash = 0;
-    for (let i = 0; i < email.length; i++) {
-        hash = ((hash << 5) - hash) + email.charCodeAt(i);
-        hash = hash & hash;
-    }
-    const hue = Math.abs(hash % 360);
-    
-    return `https://ui-avatars.com/api/?name=${iniciales}&background=hsl(${hue},70%,55%)&color=fff&size=120&bold=true&length=2&fontsize=0.5`;
-}
-
-// ============================================
-// CARGAR PERFIL
-// ============================================
-async function cargarPerfil() {
-    const infoDiv = document.getElementById('info');
-    const errorMsg = document.getElementById('errorMsg');
-    
     try {
-        const response = await fetch('/cliente/perfil', {
+        const response = await fetch('/admin/verificar', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: clienteEmail })
+            body: JSON.stringify({ email: adminEmail })
         });
-        
-        const data = await response.json();
-        
-        if (response.ok) {
-            infoDiv.innerHTML = `
-                <div class="campo">
-                    <div class="campo-label">🏷️ Nombre</div>
-                    <div class="campo-valor">${data.nombre || 'No registrado'}</div>
-                </div>
-                <div class="campo">
-                    <div class="campo-label">📧 Email</div>
-                    <div class="campo-valor">${data.email || 'No registrado'}</div>
-                </div>
-                <div class="campo">
-                    <div class="campo-label">📱 Celular</div>
-                    <div class="campo-valor">${data.celular || 'No registrado'}</div>
-                </div>
-                <div class="campo">
-                    <div class="campo-label">🏥 EPS</div>
-                    <div class="campo-valor">${data.eps || 'No registrado'}</div>
-                </div>
-                <div class="campo">
-                    <div class="campo-label">💳 Membresía</div>
-                    <div class="campo-valor">${data.membresia_id || 'No asignada'}</div>
-                </div>
-                <div class="campo">
-                    <div class="campo-label">📅 Clases restantes</div>
-                    <div class="campo-valor">${data.clases_restantes || 0}</div>
-                </div>
-                <div class="campo">
-                    <div class="campo-label">📆 Vencimiento</div>
-                    <div class="campo-valor">${data.fecha_vencimiento || 'No registrado'}</div>
-                </div>
-                <div class="campo">
-                    <div class="campo-label">🔓 Estado</div>
-                    <div class="campo-valor">${data.activo == 'TRUE' ? '✅ Activo' : '❌ Inactivo'}</div>
-                </div>
-            `;
-            
-            const avatarUrl = generarAvatar(data.nombre, data.email);
-            document.getElementById('fotoPerfil').src = avatarUrl;
-            
-            errorMsg.innerHTML = '';
-        } else {
-            infoDiv.innerHTML = '';
-            errorMsg.innerHTML = '❌ ' + (data.error || 'Error al cargar perfil');
+        if (!response.ok) {
+            localStorage.removeItem('admin_email');
+            window.location.href = '/admin/login';
         }
     } catch (error) {
-        infoDiv.innerHTML = '';
-        errorMsg.innerHTML = '❌ Error de conexión';
-        console.error('Error:', error);
+        window.location.href = '/admin/login';
+    }
+}
+
+function mostrarMensaje(mensaje, tipo) {
+    const successDiv = document.getElementById('successMsg');
+    const errorDiv = document.getElementById('errorMsg');
+    if (tipo === 'success') {
+        successDiv.style.display = 'block';
+        successDiv.innerHTML = mensaje;
+        setTimeout(() => { successDiv.style.display = 'none'; }, 3000);
+    } else {
+        errorDiv.style.display = 'block';
+        errorDiv.innerHTML = mensaje;
+        setTimeout(() => { errorDiv.style.display = 'none'; }, 3000);
     }
 }
 
 // ============================================
-// CARGAR ANUNCIOS
+// CLIENTES
+// ============================================
+let clientes = [];
+let membresias = [];
+
+async function cargarClientes() {
+    const res = await fetch('/admin/clientes');
+    clientes = await res.json();
+    mostrarClientes();
+}
+
+async function cargarMembresias() {
+    const res = await fetch('/admin/membresias');
+    membresias = await res.json();
+    const select = document.getElementById('membresiaId');
+    select.innerHTML = '';
+    membresias.forEach(m => {
+        select.innerHTML += `<option value="${m.id}">${m.nombre} (${m.clases_por_mes} clases/mes - $${m.precio})</option>`;
+    });
+}
+
+function mostrarClientes() {
+    const tbody = document.getElementById('clientesBody');
+    tbody.innerHTML = '';
+    clientes.forEach(c => {
+        const membresia = membresias.find(m => m.id == c.membresia_id);
+        tbody.innerHTML += `
+            <tr>
+                <td>${c.id}</td>
+                <td>${c.nombre || ''}</td>
+                <td>${c.email || ''}</td>
+                <td>${c.celular || ''}</td>
+                <td>${membresia ? membresia.nombre : 'Sin membresía'}</td>
+                <td style="color: ${(c.clases_restantes_mes || 0) > 0 ? '#66ff66' : '#ff6666'}">${c.clases_restantes_mes || 0}</td>
+                <td>${c.fecha_vencimiento || ''}</td>
+                <td>${c.activo == 'TRUE' ? '✅' : '❌'}</td>
+                <td>
+                    <button onclick="verPerfilCliente('${c.email}')" class="btn-ver" style="background:#00aa55;">👤</button>
+                    <button onclick="editarCliente(${c.id})" class="btn">✏️</button>
+                    <button onclick="eliminarCliente(${c.id})" class="btn">🗑️</button>
+                 </td>
+            </table>
+        `;
+    });
+}
+
+function verPerfilCliente(email) {
+    window.location.href = `/admin/cliente_perfil?email=${encodeURIComponent(email)}`;
+}
+
+function abrirModalCliente() {
+    document.getElementById('modalTitulo').innerText = 'Nuevo Cliente';
+    document.getElementById('clienteId').value = '';
+    document.getElementById('nombre').value = '';
+    document.getElementById('email').value = '';
+    document.getElementById('celular').value = '';
+    document.getElementById('eps').value = '';
+    document.getElementById('fechaVencimiento').value = '';
+    document.getElementById('activo').value = 'TRUE';
+    document.getElementById('modalCliente').style.display = 'flex';
+}
+
+function editarCliente(id) {
+    const cliente = clientes.find(c => c.id == id);
+    if (!cliente) return;
+    document.getElementById('modalTitulo').innerText = 'Editar Cliente';
+    document.getElementById('clienteId').value = cliente.id;
+    document.getElementById('nombre').value = cliente.nombre || '';
+    document.getElementById('email').value = cliente.email || '';
+    document.getElementById('celular').value = cliente.celular || '';
+    document.getElementById('eps').value = cliente.eps || '';
+    document.getElementById('membresiaId').value = cliente.membresia_id || '';
+    document.getElementById('fechaVencimiento').value = cliente.fecha_vencimiento || '';
+    document.getElementById('activo').value = cliente.activo || 'TRUE';
+    document.getElementById('modalCliente').style.display = 'flex';
+}
+
+function cerrarModal() {
+    document.getElementById('modalCliente').style.display = 'none';
+}
+
+async function guardarCliente() {
+    const id = document.getElementById('clienteId').value;
+    const datos = {
+        nombre: document.getElementById('nombre').value,
+        email: document.getElementById('email').value,
+        celular: document.getElementById('celular').value,
+        eps: document.getElementById('eps').value,
+        membresia_id: document.getElementById('membresiaId').value,
+        fecha_vencimiento: document.getElementById('fechaVencimiento').value,
+        activo: document.getElementById('activo').value,
+        foto_url: ''
+    };
+    
+    let res;
+    try {
+        if (id) {
+            res = await fetch(`/admin/clientes/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(datos)
+            });
+        } else {
+            res = await fetch('/admin/clientes', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(datos)
+            });
+        }
+        const data = await res.json();
+        if (res.ok) {
+            mostrarMensaje(data.mensaje, 'success');
+            cerrarModal();
+            cargarClientes();
+        } else {
+            mostrarMensaje(data.error || 'Error al guardar', 'error');
+        }
+    } catch (error) {
+        mostrarMensaje('Error de conexión', 'error');
+    }
+}
+
+async function eliminarCliente(id) {
+    if (confirm('¿Eliminar este cliente?')) {
+        const res = await fetch(`/admin/clientes/${id}`, { method: 'DELETE' });
+        const data = await res.json();
+        if (res.ok) {
+            mostrarMensaje(data.mensaje, 'success');
+            cargarClientes();
+        } else {
+            mostrarMensaje(data.error || 'Error al eliminar', 'error');
+        }
+    }
+}
+
+// ============================================
+// CLASES
+// ============================================
+async function crearClase() {
+    const fecha = document.getElementById('clase_fecha').value;
+    const hora = document.getElementById('clase_hora').value;
+    const cupos = document.getElementById('clase_cupos').value;
+    
+    if (!fecha || !hora || !cupos) {
+        mostrarMensaje("Completa todos los campos", 'error');
+        return;
+    }
+    
+    const res = await fetch('/admin/clases', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fecha, hora, cupos_maximos: parseInt(cupos) })
+    });
+    
+    const data = await res.json();
+    if (res.ok) {
+        mostrarMensaje(data.mensaje, 'success');
+        cargarClases();
+        document.getElementById('clase_fecha').value = '';
+        document.getElementById('clase_hora').value = '';
+        document.getElementById('clase_cupos').value = '';
+    } else {
+        mostrarMensaje(data.error || 'Error al crear clase', 'error');
+    }
+}
+
+async function cargarClases() {
+    const res = await fetch('/admin/clases');
+    const clases = await res.json();
+    const tbody = document.getElementById('clasesBody');
+    tbody.innerHTML = '';
+    
+    clases.forEach(c => {
+        const disponibles = (c.cupos_maximos || 0) - (c.cupos_ocupados || 0);
+        tbody.innerHTML += `
+            <tr>
+                <td>${c.fecha}</td>
+                <td>${c.hora}</td>
+                <td>${c.cupos_maximos}</td>
+                <td>${c.cupos_ocupados || 0}</td>
+                <td style="color: ${disponibles > 0 ? '#66ff66' : '#ff6666'}">${disponibles}</td>
+                <td>
+                    <button onclick="eliminarClase(${c.id})" class="btn-eliminar">🗑️ Eliminar</button>
+                 </td>
+            </tr>
+        `;
+    });
+}
+
+async function eliminarClase(id) {
+    if (confirm('¿Eliminar esta clase?')) {
+        const res = await fetch(`/admin/clases/${id}`, { method: 'DELETE' });
+        const data = await res.json();
+        if (res.ok) {
+            mostrarMensaje(data.mensaje, 'success');
+            cargarClases();
+        } else {
+            mostrarMensaje(data.error || 'Error al eliminar', 'error');
+        }
+    }
+}
+
+// ============================================
+// ANUNCIOS
 // ============================================
 async function cargarAnuncios() {
-    const container = document.getElementById('anunciosContainer');
+    const res = await fetch('/admin/anuncios');
+    const anuncios = await res.json();
+    const tbody = document.getElementById('anunciosBody');
+    tbody.innerHTML = '';
+    
+    anuncios.forEach(a => {
+        tbody.innerHTML += `
+            <tr>
+                <td><strong>${a.titulo || ''}</strong></td>
+                <td>${a.texto || ''}</td>
+                <td>${a.fecha_publicacion || ''}</td>
+                <td>
+                    <button onclick="toggleAnuncio(${a.id}, '${a.vigente}')" 
+                        style="background: ${a.vigente == 'TRUE' ? '#00aa55' : '#ff4444'}; padding:5px 10px;">
+                        ${a.vigente == 'TRUE' ? '✅ Activo' : '❌ Inactivo'}
+                    </button>
+                 </td>
+                <td>
+                    <button onclick="eliminarAnuncio(${a.id})" class="btn-eliminar">🗑️ Eliminar</button>
+                 </td>
+            </tr>
+        `;
+    });
+}
+
+async function crearAnuncio() {
+    const titulo = document.getElementById('anuncioTitulo').value;
+    const texto = document.getElementById('anuncioTexto').value;
+    
+    if (!titulo || !texto) {
+        mostrarMensaje("Completa título y texto", 'error');
+        return;
+    }
+    
+    const res = await fetch('/admin/anuncios', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ titulo, texto })
+    });
+    
+    const data = await res.json();
+    if (res.ok) {
+        mostrarMensaje(data.mensaje, 'success');
+        document.getElementById('anuncioTitulo').value = '';
+        document.getElementById('anuncioTexto').value = '';
+        cargarAnuncios();
+    } else {
+        mostrarMensaje(data.error, 'error');
+    }
+}
+
+async function toggleAnuncio(id, vigenteActual) {
+    const nuevaVigencia = vigenteActual == 'TRUE' ? 'FALSE' : 'TRUE';
+    
     try {
-        const response = await fetch('/cliente/anuncios');
-        const anuncios = await response.json();
+        const res = await fetch(`/admin/anuncios/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ vigente: nuevaVigencia })
+        });
         
-        if (!anuncios || anuncios.length === 0) {
-            container.innerHTML = '<p style="color:#888;">No hay anuncios disponibles</p>';
-            return;
-        }
+        const data = await res.json();
         
-        let html = '';
-        for (const a of anuncios) {
-            html += `
-                <div class="anuncio">
-                    <div class="anuncio-titulo">📢 ${a.titulo || 'Sin título'}</div>
-                    <div>${a.texto || ''}</div>
-                    <div class="anuncio-fecha">📅 ${a.fecha_publicacion || ''}</div>
-                </div>
-            `;
+        if (res.ok) {
+            mostrarMensaje(data.mensaje, 'success');
+            cargarAnuncios();
+        } else {
+            mostrarMensaje(data.error || 'Error al actualizar', 'error');
         }
-        container.innerHTML = html;
     } catch (error) {
-        container.innerHTML = '<p style="color:#ff6666;">Error al cargar anuncios</p>';
-        console.error('Error anuncios:', error);
+        mostrarMensaje('Error de conexión', 'error');
+    }
+}
+
+async function eliminarAnuncio(id) {
+    if (confirm('¿Eliminar este anuncio?')) {
+        const res = await fetch(`/admin/anuncios/${id}`, { method: 'DELETE' });
+        if (res.ok) {
+            mostrarMensaje('Anuncio eliminado', 'success');
+            cargarAnuncios();
+        } else {
+            mostrarMensaje('Error al eliminar', 'error');
+        }
     }
 }
 
@@ -191,15 +450,19 @@ async function cargarAnuncios() {
 // CERRAR SESIÓN
 // ============================================
 function cerrarSesion() {
-    localStorage.removeItem('cliente_email');
-    window.location.href = '/cliente/login';
+    localStorage.removeItem('admin_email');
+    window.location.href = '/admin/login';
 }
 
 // ============================================
 // INICIALIZAR
 // ============================================
-cargarPerfil();
-cargarAnuncios();
+verificarAdmin().then(() => {
+    cargarMembresias();
+    cargarClientes();
+    cargarClases();
+    cargarAnuncios();
+});
 </script>
 </body>
 </html>

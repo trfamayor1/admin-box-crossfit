@@ -10,9 +10,10 @@
         body{ background:#111; color:white; font-family:Arial; padding:20px; }
         .header{ display:flex; justify-content:space-between; align-items:center; margin-bottom:30px; flex-wrap:wrap; gap:10px; }
         button{ background:#ff4d00; color:white; border:none; padding:10px 20px; border-radius:10px; cursor:pointer; }
-        .btn{ background:#333; }
+        .btn{ background:#333; padding:8px 12px; margin:0 2px; }
         .btn-agregar{ background:#00aa55; }
         .btn-eliminar{ background:#ff4444; padding:5px 10px; border-radius:5px; cursor:pointer; }
+        .btn-ver{ background:#00aa55; padding:5px 10px; border-radius:5px; }
         table{ width:100%; border-collapse:collapse; margin-top:20px; }
         th, td{ padding:12px; text-align:left; border-bottom:1px solid #333; }
         th{ background:#1e1e1e; }
@@ -190,12 +191,17 @@ function mostrarClientes() {
                 <td>${c.fecha_vencimiento || ''}</td>
                 <td>${c.activo == 'TRUE' ? '✅' : '❌'}</td>
                 <td>
+                    <button onclick="verPerfilCliente('${c.email}')" class="btn-ver" style="background:#00aa55;">👤</button>
                     <button onclick="editarCliente(${c.id})" class="btn">✏️</button>
                     <button onclick="eliminarCliente(${c.id})" class="btn">🗑️</button>
                  </td>
-            </tr>
+            </table>
         `;
     });
+}
+
+function verPerfilCliente(email) {
+    window.location.href = `/admin/cliente_perfil?email=${encodeURIComponent(email)}`;
 }
 
 function abrirModalCliente() {
@@ -407,16 +413,24 @@ async function crearAnuncio() {
 
 async function toggleAnuncio(id, vigenteActual) {
     const nuevaVigencia = vigenteActual == 'TRUE' ? 'FALSE' : 'TRUE';
-    const res = await fetch(`/admin/anuncios/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ vigente: nuevaVigencia })
-    });
     
-    if (res.ok) {
-        cargarAnuncios();
-    } else {
-        mostrarMensaje('Error al actualizar', 'error');
+    try {
+        const res = await fetch(`/admin/anuncios/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ vigente: nuevaVigencia })
+        });
+        
+        const data = await res.json();
+        
+        if (res.ok) {
+            mostrarMensaje(data.mensaje, 'success');
+            cargarAnuncios();
+        } else {
+            mostrarMensaje(data.error || 'Error al actualizar', 'error');
+        }
+    } catch (error) {
+        mostrarMensaje('Error de conexión', 'error');
     }
 }
 

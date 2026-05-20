@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Perfil Cliente - Admin Box</title>
+    <link rel="manifest" href="/ADMIN/manifest.json">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        *{ margin:0; padding:0; box-sizing:border-box; }
+        body{ background:#111; color:white; font-family:Arial; padding:20px; }
+        .header{ display:flex; justify-content:space-between; align-items:center; margin-bottom:30px; }
+        button{ background:#ff4d00; color:white; border:none; padding:10px 20px; border-radius:10px; cursor:pointer; }
+        .card{ background:#1e1e1e; padding:30px; border-radius:25px; max-width:500px; margin:0 auto 20px auto; }
+        .campo{ margin:15px 0; padding:10px; background:#2a2a2a; border-radius:10px; }
+        .campo-label{ color:#ff4d00; font-weight:bold; margin-bottom:5px; }
+        .campo-valor{ font-size:16px; }
+        table{ width:100%; border-collapse:collapse; margin-top:20px; }
+        th, td{ padding:12px; text-align:left; border-bottom:1px solid #333; }
+        th{ background:#1e1e1e; }
+        h3{ color:#ff4d00; margin-bottom:15px; }
+        .volver{ background:#333; margin-bottom:20px; display:inline-block; }
+    </style>
+</head>
+<body>
+<div class="header">
+    <h2>👤 Perfil del Cliente</h2>
+    <button onclick="window.location.href='/admin/dashboard'">Volver al Dashboard</button>
+</div>
+
+<div class="card">
+    <div id="info" class="info">Cargando...</div>
+</div>
+
+<div class="card">
+    <h3>🏋️ Registros Personales (RM)</h3>
+    <div style="overflow-x:auto;">
+        <table style="width:100%">
+            <thead>
+                <tr><th>Habilidad</th><th>Peso (kg)</th><th>Fecha</th>
+            </thead>
+            <tbody id="rmBody"></tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+// Obtener email de la URL
+const urlParams = new URLSearchParams(window.location.search);
+const clienteEmail = urlParams.get('email');
+
+if (!clienteEmail) {
+    window.location.href = '/admin/dashboard';
+}
+
+async function cargarPerfil() {
+    try {
+        const response = await fetch('/cliente/perfil', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: clienteEmail })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            document.getElementById('info').innerHTML = `
+                <div class="campo">
+                    <div class="campo-label">🏷️ Nombre</div>
+                    <div class="campo-valor">${data.nombre || 'No registrado'}</div>
+                </div>
+                <div class="campo">
+                    <div class="campo-label">📧 Email</div>
+                    <div class="campo-valor">${data.email || 'No registrado'}</div>
+                </div>
+                <div class="campo">
+                    <div class="campo-label">📱 Celular</div>
+                    <div class="campo-valor">${data.celular || 'No registrado'}</div>
+                </div>
+                <div class="campo">
+                    <div class="campo-label">🏥 EPS</div>
+                    <div class="campo-valor">${data.eps || 'No registrado'}</div>
+                </div>
+                <div class="campo">
+                    <div class="campo-label">💳 Membresía</div>
+                    <div class="campo-valor">${data.membresia_id || 'No asignada'}</div>
+                </div>
+                <div class="campo">
+                    <div class="campo-label">📅 Clases restantes</div>
+                    <div class="campo-valor">${data.clases_restantes || 0}</div>
+                </div>
+                <div class="campo">
+                    <div class="campo-label">📆 Vencimiento</div>
+                    <div class="campo-valor">${data.fecha_vencimiento || 'No registrado'}</div>
+                </div>
+                <div class="campo">
+                    <div class="campo-label">🔓 Estado</div>
+                    <div class="campo-valor">${data.activo == 'TRUE' ? '✅ Activo' : '❌ Inactivo'}</div>
+                </div>
+            `;
+        } else {
+            document.getElementById('info').innerHTML = `<p style="color:#ff6666;">❌ ${data.error}</p>`;
+        }
+    } catch (error) {
+        document.getElementById('info').innerHTML = '<p style="color:#ff6666;">❌ Error de conexión</p>';
+    }
+}
+
+async function cargarRM() {
+    try {
+        const response = await fetch(`/admin/rm/${clienteEmail}?email=${encodeURIComponent(clienteEmail)}`);
+        const rmRecords = await response.json();
+        
+        const tbody = document.getElementById('rmBody');
+        tbody.innerHTML = '';
+        
+        if (!rmRecords || rmRecords.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="3">No hay registros RM</td></tr>';
+            return;
+        }
+        
+        // Cargar habilidades para obtener nombres
+        const habRes = await fetch('/api/habilidades');
+        const habilidades = await habRes.json();
+        const habilidadMap = {};
+        habilidades.forEach(h => { habilidadMap[h.id] = h.nombre_habilidad; });
+        
+        rmRecords.forEach(r => {
+            tbody.innerHTML += `
+                <tr>
+                    <td>${habilidadMap[r.habilidad_id] || 'Desconocido'}</td>
+                    <td>${r.peso_kg} kg</td>
+                    <td>${r.fecha_registro || ''}</td>
+                </tr>
+            `;
+        });
+    } catch (error) {
+        document.getElementById('rmBody').innerHTML = '<tr><td colspan="3">Error al cargar RM</td></tr>';
+    }
+}
+
+cargarPerfil();
+cargarRM();
+</script>
+</body>
+</html>

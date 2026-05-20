@@ -97,6 +97,10 @@ def admin_login():
 def admin_dashboard():
     return render_template('admin/dashboard.html')
 
+@app.route('/admin/cliente_perfil')
+def admin_cliente_perfil():
+    return render_template('admin/cliente_perfil.html')
+
 @app.route('/admin/verificar', methods=['POST'])
 def admin_verificar():
     data = request.json
@@ -331,6 +335,40 @@ def admin_toggle_anuncio(anuncio_id):
         return jsonify({"error": "Anuncio no encontrado"}), 404
     except Exception as e:
         print(f"Error en toggle anuncio: {e}")
+        return jsonify({"error": str(e)}), 500
+
+# ============================================
+# ADMIN - VER RM DE CUALQUIER CLIENTE
+# ============================================
+@app.route('/admin/rm/<string:email>', methods=['GET'])
+def admin_obtener_rm_cliente(email):
+    try:
+        # Obtener cliente_id por email
+        sheet_clientes = get_sheet("clientes")
+        clientes = sheet_clientes.get_all_records()
+        cliente_id = None
+        for c in clientes:
+            if c.get('email') == email:
+                cliente_id = c.get('id')
+                break
+        
+        if not cliente_id:
+            return jsonify([])
+        
+        sheet_rm = get_sheet("rm_records")
+        registros = sheet_rm.get_all_records()
+        
+        resultado = []
+        for r in registros:
+            if r.get('cliente_id') == cliente_id:
+                resultado.append({
+                    "id": r.get('id'),
+                    "habilidad_id": r.get('habilidad_id'),
+                    "peso_kg": r.get('peso_kg'),
+                    "fecha_registro": r.get('fecha_registro')
+                })
+        return jsonify(resultado)
+    except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 # ============================================
@@ -604,6 +642,51 @@ def cliente_eliminar_rm():
             sheet_rm.delete_rows(fila_index)
             return jsonify({"mensaje": "RM eliminado correctamente"})
         return jsonify({"error": "RM no encontrado"}), 404
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# ============================================
+# API CLIENTE - VER RM DE OTRO CLIENTE (público)
+# ============================================
+@app.route('/cliente/rm/publico', methods=['GET'])
+def cliente_ver_rm_publico():
+    email = request.args.get('email')
+    if not email:
+        return jsonify([])
+    
+    try:
+        # Obtener cliente_id por email
+        sheet_clientes = get_sheet("clientes")
+        clientes = sheet_clientes.get_all_records()
+        cliente_id = None
+        for c in clientes:
+            if c.get('email') == email:
+                cliente_id = c.get('id')
+                break
+        
+        if not cliente_id:
+            return jsonify([])
+        
+        # Obtener habilidades para mostrar nombres
+        sheet_habilidades = get_sheet("habilidades")
+        habilidades = sheet_habilidades.get_all_records()
+        habilidades_dict = {h.get('id'): h.get('nombre_habilidad') for h in habilidades}
+        
+        # Obtener RM
+        sheet_rm = get_sheet("rm_records")
+        registros = sheet_rm.get_all_records()
+        
+        resultado = []
+        for r in registros:
+            if r.get('cliente_id') == cliente_id:
+                resultado.append({
+                    "id": r.get('id'),
+                    "habilidad_id": r.get('habilidad_id'),
+                    "habilidad_nombre": habilidades_dict.get(r.get('habilidad_id'), 'Desconocido'),
+                    "peso_kg": r.get('peso_kg'),
+                    "fecha_registro": r.get('fecha_registro')
+                })
+        return jsonify(resultado)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
