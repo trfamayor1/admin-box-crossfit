@@ -1,34 +1,137 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Clases - Mi Box</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Clases - Machine Box</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-
+    
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
+    
     <!-- Estilos globales -->
     <link rel="stylesheet" href="/static/css/style.css">
+    
+    <style>
+        /* Estilos específicos para clases */
+        .clase-card {
+            background: var(--bg-card);
+            border-radius: var(--radius-lg);
+            padding: 20px;
+            margin-bottom: 16px;
+            border: 1px solid var(--border-color);
+            transition: all var(--transition-normal);
+        }
+        
+        .clase-card:hover {
+            transform: translateY(-2px);
+            border-color: var(--border-glow);
+            box-shadow: var(--shadow-glow);
+        }
+        
+        .clase-fecha {
+            color: var(--primary);
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .clase-hora {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            color: var(--text-primary);
+        }
+        
+        .clase-cupos {
+            display: inline-block;
+            background: rgba(16, 185, 129, 0.2);
+            color: #10b981;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+            margin-bottom: 16px;
+        }
+        
+        .clase-cupos.lleno {
+            background: rgba(220, 38, 38, 0.2);
+            color: #dc2626;
+        }
+        
+        .btn-reservar {
+            width: 100%;
+            background: var(--primary);
+            color: var(--bg-primary);
+            border: none;
+            padding: 14px;
+            border-radius: var(--radius-md);
+            font-weight: 700;
+            cursor: pointer;
+            transition: all var(--transition-normal);
+        }
+        
+        .btn-reservar:hover {
+            transform: scale(1.02);
+            box-shadow: var(--shadow-glow);
+        }
+        
+        .btn-reservar:disabled {
+            background: var(--text-disabled);
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .btn-reservar.reservado {
+            background: #10b981;
+            color: white;
+        }
+        
+        .loading-spinner {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-secondary);
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-secondary);
+        }
+        
+        .empty-state i {
+            font-size: 48px;
+            color: var(--primary);
+            margin-bottom: 16px;
+        }
+    </style>
 </head>
 <body>
-<div class="header">
-    <h2>🏋️ Clases Disponibles</h2>
-    <button class="btn-salir" onclick="cerrarSesion()">Salir</button>
+<div class="container">
+    <div class="header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; flex-wrap: wrap; gap: 15px;">
+        <h2><i class="fas fa-dumbbell" style="color: var(--primary);"></i> Clases Disponibles</h2>
+        <button class="btn-salir" onclick="cerrarSesion()"><i class="fas fa-sign-out-alt"></i> Salir</button>
+    </div>
+
+    <nav>
+        <a href="/cliente/perfil"><i class="fas fa-user"></i> Mi Perfil</a>
+        <a href="/cliente/clases"><i class="fas fa-calendar-alt"></i> Clases</a>
+        <a href="/cliente/mis-reservas"><i class="fas fa-bookmark"></i> Mis Reservas</a>
+        <a href="/cliente/rm"><i class="fas fa-chart-simple"></i> Mis RM</a>
+    </nav>
+
+    <div id="clasesContainer" class="loading-spinner">
+        <i class="fas fa-spinner fa-pulse"></i>
+        <p>Cargando clases...</p>
+    </div>
+    <div id="msg" class="error"></div>
 </div>
 
-<nav>
-    <a href="/cliente/perfil">Mi Perfil</a>
-    <a href="/cliente/clases">Clases</a>
-    <a href="/cliente/mis-reservas">Mis Reservas</a>
-</nav>
-
-<div id="clasesContainer" class="loading">Cargando clases...</div>
-<p id="msg" class="error"></p>
-
 <script>
-// Verificar que el cliente está logueado
 const clienteEmail = localStorage.getItem('cliente_email');
 if (!clienteEmail) {
     window.location.href = '/cliente/login';
@@ -38,66 +141,78 @@ async function cargarClases() {
     const container = document.getElementById('clasesContainer');
     const msg = document.getElementById('msg');
     
-    container.innerHTML = '<div class="loading">Cargando clases...</div>';
-    msg.innerHTML = '';
-    
     try {
-        // Usar la API pública /api/clases
         const response = await fetch('/api/clases');
         
         if (!response.ok) {
-            const errorText = await response.text();
-            console.error('Error response:', errorText);
-            container.innerHTML = '';
-            msg.innerHTML = '❌ Error del servidor: ' + response.status;
-            msg.className = 'error';
-            return;
+            throw new Error('Error al cargar clases');
         }
         
         const data = await response.json();
-        console.log('Clases recibidas:', data);
         
         container.innerHTML = '';
         
-        if (!data || !Array.isArray(data) || data.length === 0) {
-            container.innerHTML = '<div class="card"><p>📭 No hay clases disponibles por ahora. El administrador creará clases pronto.</p></div>';
+        if (!data || data.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-calendar-times"></i>
+                    <p>No hay clases disponibles en las próximas 24 horas</p>
+                </div>
+            `;
             return;
         }
         
-        // Obtener reservas del cliente para saber qué clases ya reservó
-        const reservasResponse = await fetch('/cliente/mis-reservas', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: clienteEmail })
-        });
-        const reservas = await reservasResponse.json();
-        const clasesReservadas = new Set(reservas.map(r => r.clase_id));
-        
         for (const clase of data) {
             const disponibles = (clase.cupos_maximos || 0) - (clase.cupos_ocupados || 0);
-            const yaReservada = clasesReservadas.has(clase.id);
+            const yaReservada = await verificarReserva(clase.id);
             const estaLlena = disponibles <= 0;
             
             container.innerHTML += `
-                <div class="card">
-                    <div class="clase-fecha">📅 ${clase.fecha || 'Sin fecha'}</div>
-                    <div class="clase-hora">⏰ ${clase.hora || 'Sin hora'}</div>
-                    <div class="cupos">📊 Cupos disponibles: ${disponibles}</div>
+                <div class="clase-card">
+                    <div class="clase-fecha">
+                        <i class="fas fa-calendar-day"></i> ${clase.fecha || 'Sin fecha'}
+                    </div>
+                    <div class="clase-hora">
+                        <i class="fas fa-clock"></i> ${clase.hora || 'Sin hora'}
+                    </div>
+                    <div class="clase-cupos ${estaLlena ? 'lleno' : ''}">
+                        <i class="fas fa-users"></i> ${disponibles} cupos disponibles
+                    </div>
                     ${yaReservada ? 
-                        '<button class="reservado" disabled>✅ Ya reservaste</button>' : 
+                        `<button class="btn-reservar reservado" disabled><i class="fas fa-check-circle"></i> Ya reservaste</button>` : 
                         (estaLlena ? 
-                            '<button class="btn-reservar" disabled>❌ Sin cupos</button>' : 
-                            `<button class="btn-reservar" onclick="reservarClase(${clase.id})">📝 Reservar</button>`
+                            `<button class="btn-reservar" disabled><i class="fas fa-ban"></i> Sin cupos</button>` : 
+                            `<button class="btn-reservar" onclick="reservarClase(${clase.id})"><i class="fas fa-calendar-plus"></i> Reservar</button>`
                         )
                     }
                 </div>
             `;
         }
     } catch (error) {
-        console.error('Error detallado:', error);
-        container.innerHTML = '';
-        msg.innerHTML = '❌ Error de conexión: ' + error.message;
-        msg.className = 'error';
+        console.error('Error:', error);
+        container.innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-exclamation-triangle"></i>
+                <p>Error al cargar las clases. Intenta de nuevo.</p>
+            </div>
+        `;
+    }
+}
+
+async function verificarReserva(claseId) {
+    try {
+        const response = await fetch('/cliente/verificar-reserva', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                email: clienteEmail,
+                clase_id: claseId 
+            })
+        });
+        const data = await response.json();
+        return data.reservado === true;
+    } catch (error) {
+        return false;
     }
 }
 
@@ -105,7 +220,7 @@ async function reservarClase(claseId) {
     if (!confirm('¿Reservar esta clase?')) return;
     
     const msg = document.getElementById('msg');
-    msg.innerHTML = '⏳ Procesando reserva...';
+    msg.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> Procesando reserva...';
     msg.className = '';
     
     try {
@@ -121,19 +236,17 @@ async function reservarClase(claseId) {
         const data = await response.json();
         
         if (response.ok) {
-            msg.innerHTML = `✅ ${data.mensaje}`;
+            msg.innerHTML = `<i class="fas fa-check-circle"></i> ${data.mensaje}`;
             msg.className = 'exito';
-            cargarClases(); // Recargar lista de clases
-            setTimeout(() => {
-                msg.innerHTML = '';
-            }, 3000);
+            cargarClases();
+            setTimeout(() => { msg.innerHTML = ''; }, 3000);
         } else {
-            msg.innerHTML = `❌ ${data.error || 'Error al reservar'}`;
+            msg.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${data.error || 'Error al reservar'}`;
             msg.className = 'error';
         }
     } catch (error) {
         console.error('Error reservar:', error);
-        msg.innerHTML = '❌ Error de conexión al reservar';
+        msg.innerHTML = '<i class="fas fa-exclamation-circle"></i> Error de conexión';
         msg.className = 'error';
     }
 }
@@ -143,7 +256,6 @@ function cerrarSesion() {
     window.location.href = '/cliente/login';
 }
 
-// Cargar clases al iniciar
 cargarClases();
 </script>
 </body>
