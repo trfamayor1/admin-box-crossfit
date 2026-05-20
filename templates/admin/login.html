@@ -13,6 +13,8 @@
     <!-- Estilos globales -->
     <link rel="stylesheet" href="/static/css/style.css">
 
+    <link rel="manifest" href="/manifest-admin.json">
+
 </head>
 <body>
 <div class="card">
@@ -54,5 +56,14 @@ async function login() {
     }
 }
 </script>
+
+<script>
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw-admin.js')
+        .then(reg => console.log('✅ SW Admin registrado'))
+        .catch(err => console.log('❌ SW Admin error:', err));
+}
+</script>
+
 </body>
 </html>

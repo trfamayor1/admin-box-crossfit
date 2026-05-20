@@ -1014,6 +1014,13 @@ def serve_manifest():
 def serve_sw():
     return send_from_directory('.', 'sw.js')
 
+@app.route('/manifest-admin.json')
+def serve_manifest_admin():
+    return send_from_directory('.', 'manifest-admin.json')
+
+@app.route('/sw-admin.js')
+def serve_sw_admin():
+    return send_from_directory('.', 'sw-admin.js')
 
 # ============================================
 # INICIAR SERVIDOR
