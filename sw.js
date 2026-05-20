@@ -1,12 +1,13 @@
 // Service Worker para Machine Box PWA
-const CACHE_NAME = 'machinebox-v1';
+const CACHE_NAME = 'machinebox-v3';
 
 self.addEventListener('install', event => {
-    self.skipWaiting();
-    console.log('Service Worker instalado');
+    console.log('SW instalado');
+    self.skipWaiting();  // 👈 Fuerza activación inmediata
 });
 
 self.addEventListener('activate', event => {
+    console.log('SW activado');
     event.waitUntil(
         caches.keys().then(keys => {
             return Promise.all(keys.map(key => {
@@ -16,14 +17,9 @@ self.addEventListener('activate', event => {
             }));
         })
     );
-    self.clients.claim();
-    console.log('Service Worker activado');
+    return self.clients.claim();  // 👈 Toma control inmediato
 });
 
 self.addEventListener('fetch', event => {
-    event.respondWith(
-        fetch(event.request).catch(() => {
-            return caches.match(event.request);
-        })
-    );
+    event.respondWith(fetch(event.request));
 });

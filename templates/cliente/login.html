@@ -60,8 +60,19 @@ async function login() {
 <script>
 if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/sw.js')
-        .then(reg => console.log('✅ SW registrado:', reg))
+        .then(reg => {
+            console.log('✅ SW registrado');
+            // Forzar activación
+            if (reg.waiting) {
+                reg.waiting.postMessage({type: 'SKIP_WAITING'});
+            }
+        })
         .catch(err => console.log('❌ SW error:', err));
+    
+    // Asegurar que el SW tome control
+    navigator.serviceWorker.ready.then(() => {
+        console.log('✅ SW listo');
+    });
 }
 </script>
 
