@@ -231,9 +231,6 @@ def admin_obtener_membresias():
         return jsonify({"error": str(e)}), 500
 
 # ============================================
-# ADMIN - CLASES
-# ============================================
-# ============================================
 # ADMIN - CLASES (solo futuras o actuales)
 # ============================================
 @app.route('/admin/clases', methods=['GET'])
@@ -242,7 +239,6 @@ def admin_obtener_clases():
         sheet = get_sheet("clases")
         registros = sheet.get_all_records()
         
-        from datetime import date
         hoy = date.today().isoformat()
         
         clases_futuras = []
@@ -271,20 +267,6 @@ def admin_crear_clase():
         return jsonify({"mensaje": "Clase creada", "id": nuevo_id})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
-@app.route('/admin/clases/<int:clase_id>', methods=['DELETE'])
-def admin_eliminar_clase(clase_id):
-    try:
-        sheet = get_sheet("clases")
-        registros = sheet.get_all_records()
-        for i, r in enumerate(registros, start=2):
-            if r.get('id') == clase_id:
-                sheet.delete_rows(i)
-                return jsonify({"mensaje": "Clase eliminada"})
-        return jsonify({"error": "No encontrada"}), 404
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-    
 
 @app.route('/admin/clases/<int:clase_id>', methods=['DELETE'])
 def admin_eliminar_clase(clase_id):
@@ -373,7 +355,6 @@ def admin_toggle_anuncio(anuncio_id):
 @app.route('/admin/rm/<string:email>', methods=['GET'])
 def admin_obtener_rm_cliente(email):
     try:
-        # Obtener cliente_id por email
         sheet_clientes = get_sheet("clientes")
         clientes = sheet_clientes.get_all_records()
         cliente_id = None
@@ -685,7 +666,6 @@ def cliente_ver_rm_publico():
         return jsonify([])
     
     try:
-        # Obtener cliente_id por email
         sheet_clientes = get_sheet("clientes")
         clientes = sheet_clientes.get_all_records()
         cliente_id = None
@@ -697,12 +677,10 @@ def cliente_ver_rm_publico():
         if not cliente_id:
             return jsonify([])
         
-        # Obtener habilidades para mostrar nombres
         sheet_habilidades = get_sheet("habilidades")
         habilidades = sheet_habilidades.get_all_records()
         habilidades_dict = {h.get('id'): h.get('nombre_habilidad') for h in habilidades}
         
-        # Obtener RM
         sheet_rm = get_sheet("rm_records")
         registros = sheet_rm.get_all_records()
         
@@ -718,6 +696,115 @@ def cliente_ver_rm_publico():
                 })
         return jsonify(resultado)
     except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# ============================================
+# API CLIENTE - OBTENER OTROS CLIENTES EN LA MISMA CLASE
+# ============================================
+@app.route('/cliente/otros-reservas', methods=['POST'])
+def cliente_otros_reservas():
+    data = request.json
+    email_actual = data.get('email')
+    clase_id = data.get('clase_id')
+    
+    try:
+        sheet_clientes = get_sheet("clientes")
+        clientes = sheet_clientes.get_all_records()
+        
+        cliente_actual_id = None
+        for c in clientes:
+            if c.get('email') == email_actual:
+                cliente_actual_id = c.get('id')
+                break
+        
+        if not cliente_actual_id:
+            return jsonify([])
+        
+        sheet_reservas = get_sheet("reservas")
+        reservas = sheet_reservas.get_all_records()
+        
+        otros_ids = set()
+        for r in reservas:
+            if r.get('clase_id') == clase_id and r.get('cliente_id') != cliente_actual_id:
+                otros_ids.add(r.get('cliente_id'))
+        
+        resultado = []
+        for c in clientes:
+            if c.get('id') in otros_ids:
+                resultado.append({
+                    "nombre": c.get('nombre', 'Cliente'),
+                    "email": c.get('email', '')
+                })
+        
+        return jsonify(resultado)
+    except Exception as e:
+        print(f"Error en otros-reservas: {e}")
+        return jsonify([])
+
+# ============================================
+# API CLIENTE - DATOS PÚBLICOS DE OTRO CLIENTE (solo nombre y RM)
+# ============================================
+@app.route('/cliente/datos-publicos', methods=['GET'])
+def cliente_datos_publicos():
+    email = request.args.get('email')
+    if not email:
+        return jsonify({"error": "Email requerido"}), 400
+    
+    try:
+        sheet_clientes = get_sheet("clientes")
+        clientes = sheet_clientes.get_all_records()
+        cliente_info = None
+        for c in clientes:
+            if c.get('email') == email:
+                cliente_info = {
+                    "nombre": c.get('nombre', 'Cliente'),
+                    "email": c.get('email', '')
+                }
+                break
+        
+        if not cliente_info:
+            return jsonify({"error": "Cliente no encontrado"}), 404
+        
+        sheet_habilidades = get_sheet("habilidades")
+        habilidades = sheet_habilidades.get_all_records()
+        habilidades_dict = {h.get('id'): h.get('nombre_habilidad') for h in habilidades}
+        
+        sheet_rm = get_sheet("rm_records")
+        registros = sheet_rm.get_all_records()
+        
+        rm_lista = []
+        for r in registros:
+            if r.get('email') == email or r.get('cliente_email') == email:
+                rm_lista.append({
+                    "habilidad_nombre": habilidades_dict.get(r.get('habilidad_id'), 'Desconocido'),
+                    "peso_kg": r.get('peso_kg'),
+                    "fecha_registro": r.get('fecha_registro')
+                })
+        
+        if not rm_lista:
+            cliente_id = None
+            for c in clientes:
+                if c.get('email') == email:
+                    cliente_id = c.get('id')
+                    break
+            
+            if cliente_id:
+                sheet_rm = get_sheet("rm_records")
+                registros = sheet_rm.get_all_records()
+                for r in registros:
+                    if r.get('cliente_id') == cliente_id:
+                        rm_lista.append({
+                            "habilidad_nombre": habilidades_dict.get(r.get('habilidad_id'), 'Desconocido'),
+                            "peso_kg": r.get('peso_kg'),
+                            "fecha_registro": r.get('fecha_registro')
+                        })
+        
+        return jsonify({
+            "nombre": cliente_info['nombre'],
+            "rm": rm_lista
+        })
+    except Exception as e:
+        print(f"Error en datos-publicos: {e}")
         return jsonify({"error": str(e)}), 500
 
 # ============================================
@@ -917,125 +1004,6 @@ def cliente_cancelar_reserva():
             return jsonify({"mensaje": f"✅ Reserva cancelada. Ahora tienes {nuevas_restantes} clases."})
         return jsonify({"mensaje": "✅ Reserva cancelada."})
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-
-# ============================================
-# API CLIENTE - OBTENER OTROS CLIENTES EN LA MISMA CLASE
-# ============================================
-@app.route('/cliente/otros-reservas', methods=['POST'])
-def cliente_otros_reservas():
-    data = request.json
-    email_actual = data.get('email')
-    clase_id = data.get('clase_id')
-    
-    try:
-        # Obtener cliente_id del actual
-        sheet_clientes = get_sheet("clientes")
-        clientes = sheet_clientes.get_all_records()
-        
-        cliente_actual_id = None
-        for c in clientes:
-            if c.get('email') == email_actual:
-                cliente_actual_id = c.get('id')
-                break
-        
-        if not cliente_actual_id:
-            return jsonify([])
-        
-        # Obtener todas las reservas de esta clase
-        sheet_reservas = get_sheet("reservas")
-        reservas = sheet_reservas.get_all_records()
-        
-        otros_ids = set()
-        for r in reservas:
-            if r.get('clase_id') == clase_id and r.get('cliente_id') != cliente_actual_id:
-                otros_ids.add(r.get('cliente_id'))
-        
-        # Obtener nombres y emails de esos clientes
-        resultado = []
-        for c in clientes:
-            if c.get('id') in otros_ids:
-                resultado.append({
-                    "nombre": c.get('nombre', 'Cliente'),
-                    "email": c.get('email', '')  # 👈 LÍNEA AGREGADA
-                })
-        
-        return jsonify(resultado)
-    except Exception as e:
-        print(f"Error en otros-reservas: {e}")
-        return jsonify([])
-
-# ============================================
-# API CLIENTE - DATOS PÚBLICOS DE OTRO CLIENTE (solo nombre y RM)
-# ============================================
-@app.route('/cliente/datos-publicos', methods=['GET'])
-def cliente_datos_publicos():
-    email = request.args.get('email')
-    if not email:
-        return jsonify({"error": "Email requerido"}), 400
-    
-    try:
-        # Obtener datos básicos del cliente (solo nombre)
-        sheet_clientes = get_sheet("clientes")
-        clientes = sheet_clientes.get_all_records()
-        cliente_info = None
-        for c in clientes:
-            if c.get('email') == email:
-                cliente_info = {
-                    "nombre": c.get('nombre', 'Cliente'),
-                    "email": c.get('email', '')
-                }
-                break
-        
-        if not cliente_info:
-            return jsonify({"error": "Cliente no encontrado"}), 404
-        
-        # Obtener habilidades
-        sheet_habilidades = get_sheet("habilidades")
-        habilidades = sheet_habilidades.get_all_records()
-        habilidades_dict = {h.get('id'): h.get('nombre_habilidad') for h in habilidades}
-        
-        # Obtener RM del cliente
-        sheet_rm = get_sheet("rm_records")
-        registros = sheet_rm.get_all_records()
-        
-        rm_lista = []
-        for r in registros:
-            if r.get('email') == email or r.get('cliente_email') == email:
-                rm_lista.append({
-                    "habilidad_nombre": habilidades_dict.get(r.get('habilidad_id'), 'Desconocido'),
-                    "peso_kg": r.get('peso_kg'),
-                    "fecha_registro": r.get('fecha_registro')
-                })
-        
-        # Si no se encontró por email, buscar por cliente_id
-        if not rm_lista:
-            sheet_clientes = get_sheet("clientes")
-            clientes_all = sheet_clientes.get_all_records()
-            cliente_id = None
-            for c in clientes_all:
-                if c.get('email') == email:
-                    cliente_id = c.get('id')
-                    break
-            
-            if cliente_id:
-                sheet_rm = get_sheet("rm_records")
-                registros = sheet_rm.get_all_records()
-                for r in registros:
-                    if r.get('cliente_id') == cliente_id:
-                        rm_lista.append({
-                            "habilidad_nombre": habilidades_dict.get(r.get('habilidad_id'), 'Desconocido'),
-                            "peso_kg": r.get('peso_kg'),
-                            "fecha_registro": r.get('fecha_registro')
-                        })
-        
-        return jsonify({
-            "nombre": cliente_info['nombre'],
-            "rm": rm_lista
-        })
-    except Exception as e:
-        print(f"Error en datos-publicos: {e}")
         return jsonify({"error": str(e)}), 500
 
 # ============================================
