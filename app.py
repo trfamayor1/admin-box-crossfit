@@ -233,11 +233,27 @@ def admin_obtener_membresias():
 # ============================================
 # ADMIN - CLASES
 # ============================================
+# ============================================
+# ADMIN - CLASES (solo futuras o actuales)
+# ============================================
 @app.route('/admin/clases', methods=['GET'])
 def admin_obtener_clases():
     try:
         sheet = get_sheet("clases")
-        return jsonify(sheet.get_all_records())
+        registros = sheet.get_all_records()
+        
+        from datetime import date
+        hoy = date.today().isoformat()
+        
+        clases_futuras = []
+        for c in registros:
+            fecha_clase = c.get('fecha', '')
+            if fecha_clase and fecha_clase >= hoy:
+                clases_futuras.append(c)
+        
+        clases_futuras.sort(key=lambda x: x.get('fecha', ''))
+        
+        return jsonify(clases_futuras)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -255,6 +271,20 @@ def admin_crear_clase():
         return jsonify({"mensaje": "Clase creada", "id": nuevo_id})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+@app.route('/admin/clases/<int:clase_id>', methods=['DELETE'])
+def admin_eliminar_clase(clase_id):
+    try:
+        sheet = get_sheet("clases")
+        registros = sheet.get_all_records()
+        for i, r in enumerate(registros, start=2):
+            if r.get('id') == clase_id:
+                sheet.delete_rows(i)
+                return jsonify({"mensaje": "Clase eliminada"})
+        return jsonify({"error": "No encontrada"}), 404
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    
 
 @app.route('/admin/clases/<int:clase_id>', methods=['DELETE'])
 def admin_eliminar_clase(clase_id):
