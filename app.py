@@ -1006,6 +1006,11 @@ def cliente_cancelar_reserva():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route('/manifest.json')
+def serve_manifest():
+    return send_from_directory('.', 'manifest.json')
+
+
 # ============================================
 # INICIAR SERVIDOR
 # ============================================
