@@ -13,11 +13,20 @@
         .clase-fecha{ color:#ff4d00; font-size:18px; font-weight:bold; }
         .clase-hora{ font-size:24px; margin:10px 0; }
         .btn-cancelar{ background:#ff4444; padding:10px 20px; margin-top:10px; }
+        .btn-ver{ background:#00aa55; padding:5px 10px; margin-left:10px; }
         nav{ display:flex; gap:15px; margin-bottom:20px; flex-wrap:wrap; justify-content:center; }
         nav a{ color:white; text-decoration:none; padding:10px; border-radius:10px; background:#333; }
         nav a:hover{ background:#ff4d00; }
         .error{ color:#ff6666; margin-top:15px; text-align:center; }
         .exito{ color:#66ff66; margin-top:15px; text-align:center; }
+        .otros-clientes{ margin-top:15px; }
+        .otros-clientes summary{ cursor:pointer; color:#00aa55; font-weight:bold; }
+        .cliente-item{ padding:8px; margin:5px 0; background:#2a2a2a; border-radius:8px; }
+        .modal{ display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); justify-content:center; align-items:center; z-index:1000; }
+        .modal-content{ background:#1e1e1e; padding:30px; border-radius:20px; width:90%; max-width:400px; max-height:80%; overflow-y:auto; }
+        .cerrar{ float:right; cursor:pointer; font-size:24px; }
+        .rm-item{ margin:10px 0; padding:8px; background:#2a2a2a; border-radius:8px; }
+        .ver-rm{ background:#00aa55; border:none; padding:5px 10px; border-radius:8px; cursor:pointer; margin-top:5px; color:white; }
     </style>
 </head>
 <body>
@@ -30,10 +39,20 @@
     <a href="/cliente/perfil">Mi Perfil</a>
     <a href="/cliente/clases">Clases</a>
     <a href="/cliente/mis-reservas">Mis Reservas</a>
+    <a href="/cliente/rm">Mis RM</a>
 </nav>
 
 <div id="reservasContainer"></div>
 <p id="msg" class="error"></p>
+
+<!-- Modal para ver RM de otro cliente -->
+<div id="modalRM" class="modal">
+    <div class="modal-content">
+        <span class="cerrar" onclick="cerrarModalRM()">&times;</span>
+        <h3 id="modalTitulo">Registros (RM)</h3>
+        <div id="modalRMLista"></div>
+    </div>
+</div>
 
 <script>
 const clienteEmail = localStorage.getItem('cliente_email');
@@ -56,25 +75,90 @@ async function cargarReservas() {
         
         container.innerHTML = '';
         
-        if (!Array.isArray(reservas) || reservas.length === 0) {
-            container.innerHTML = '<div class="card"><p>No tienes reservas activas.</p></div>';
+        if (reservas.length === 0) {
+            container.innerHTML = '<div class="card"><p>📭 No tienes reservas activas. Las reservas de clases pasadas ya no aparecen aquí.</p></div>';
             return;
         }
         
         for (const r of reservas) {
+            // Cargar los otros clientes que reservaron esta misma clase
+            const otrosClientes = await cargarOtrosClientes(r.clase_id);
+            
             container.innerHTML += `
                 <div class="card">
                     <div class="clase-fecha">📅 ${r.fecha}</div>
                     <div class="clase-hora">⏰ ${r.hora}</div>
                     <button class="btn-cancelar" onclick="cancelarReserva(${r.reserva_id}, ${r.clase_id})">❌ Cancelar reserva</button>
+                    
+                    <div class="otros-clientes">
+                        <details>
+                            <summary>👥 Ver otros clientes (${otrosClientes.length})</summary>
+                            <div id="otrosClientes-${r.clase_id}" style="margin-top:10px;">
+                                ${otrosClientes.map(c => `
+                                    <div class="cliente-item">
+                                        🏋️ ${c.nombre}
+                                        <button class="ver-rm" onclick="verRMCliente('${c.email}', '${c.nombre}')">Ver RM</button>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </details>
+                    </div>
                 </div>
             `;
         }
     } catch (error) {
         console.error('Error:', error);
-        msg.innerHTML = '❌ Error al cargar reservas';
-        msg.className = 'error';
+        container.innerHTML = '<div class="card"><p>❌ Error al cargar reservas</p></div>';
     }
+}
+
+async function cargarOtrosClientes(claseId) {
+    try {
+        const response = await fetch('/cliente/otros-reservas', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                email: clienteEmail,
+                clase_id: claseId 
+            })
+        });
+        return await response.json();
+    } catch (error) {
+        console.error('Error cargar otros clientes:', error);
+        return [];
+    }
+}
+
+async function verRMCliente(email, nombre) {
+    const modal = document.getElementById('modalRM');
+    const titulo = document.getElementById('modalTitulo');
+    const lista = document.getElementById('modalRMLista');
+    
+    titulo.innerHTML = `🏋️ RM de ${nombre}`;
+    lista.innerHTML = '<p>Cargando...</p>';
+    modal.style.display = 'flex';
+    
+    try {
+        const response = await fetch(`/cliente/datos-publicos?email=${encodeURIComponent(email)}`);
+        const data = await response.json();
+        
+        if (response.ok && data.rm && data.rm.length > 0) {
+            lista.innerHTML = data.rm.map(r => `
+                <div class="rm-item">
+                    <strong>${r.habilidad_nombre || 'Desconocido'}</strong>: ${r.peso_kg} kg
+                    <span style="font-size:11px; color:#888;"> (${r.fecha_registro || ''})</span>
+                </div>
+            `).join('');
+        } else {
+            lista.innerHTML = '<p>📭 Este cliente no tiene registros RM aún.</p>';
+        }
+    } catch (error) {
+        lista.innerHTML = '<p style="color:#ff6666;">❌ Error al cargar RM</p>';
+    }
+}
+
+function cerrarModalRM() {
+    document.getElementById('modalRM').style.display = 'none';
 }
 
 async function cancelarReserva(reservaId, claseId) {
@@ -100,17 +184,14 @@ async function cancelarReserva(reservaId, claseId) {
         if (response.ok) {
             msg.innerHTML = `✅ ${data.mensaje}`;
             msg.className = 'exito';
-            cargarReservas(); // Recargar la lista de reservas
-            // Opcional: mostrar mensaje temporal y desaparecer
-            setTimeout(() => {
-                msg.innerHTML = '';
-            }, 3000);
+            cargarReservas();
+            setTimeout(() => { msg.innerHTML = ''; }, 3000);
         } else {
-            msg.innerHTML = `❌ ${data.error || 'Error al cancelar reserva'}`;
+            msg.innerHTML = `❌ ${data.error || 'Error al cancelar'}`;
             msg.className = 'error';
         }
     } catch (error) {
-        console.error('Error al cancelar:', error);
+        console.error('Error cancelar:', error);
         msg.innerHTML = '❌ Error de conexión';
         msg.className = 'error';
     }

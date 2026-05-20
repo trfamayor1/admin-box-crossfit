@@ -889,6 +889,54 @@ def cliente_cancelar_reserva():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+
+# ============================================
+# API CLIENTE - OBTENER OTROS CLIENTES EN LA MISMA CLASE
+# ============================================
+@app.route('/cliente/otros-reservas', methods=['POST'])
+def cliente_otros_reservas():
+    data = request.json
+    email_actual = data.get('email')
+    clase_id = data.get('clase_id')
+    
+    try:
+        # Obtener cliente_id del actual
+        sheet_clientes = get_sheet("clientes")
+        clientes = sheet_clientes.get_all_records()
+        
+        cliente_actual_id = None
+        for c in clientes:
+            if c.get('email') == email_actual:
+                cliente_actual_id = c.get('id')
+                break
+        
+        if not cliente_actual_id:
+            return jsonify([])
+        
+        # Obtener todas las reservas de esta clase
+        sheet_reservas = get_sheet("reservas")
+        reservas = sheet_reservas.get_all_records()
+        
+        otros_ids = set()
+        for r in reservas:
+            if r.get('clase_id') == clase_id and r.get('cliente_id') != cliente_actual_id:
+                otros_ids.add(r.get('cliente_id'))
+        
+        # Obtener nombres de esos clientes (sin datos sensibles)
+        resultado = []
+        for c in clientes:
+            if c.get('id') in otros_ids:
+                resultado.append({
+                    "nombre": c.get('nombre', 'Cliente')
+                })
+        
+        return jsonify(resultado)
+    except Exception as e:
+        print(f"Error en otros-reservas: {e}")
+        return jsonify([])
+
+
+
 # ============================================
 # INICIAR SERVIDOR
 # ============================================
