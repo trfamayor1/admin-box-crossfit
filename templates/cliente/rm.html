@@ -1,43 +1,205 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Mis RM - Mi Box</title>
+    <title>Mis RM - Machine Box</title>
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    
+    <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Estilos globales -->
     <link rel="stylesheet" href="/static/css/style.css">
+    
+    <style>
+        .rm-card {
+            background: var(--bg-card);
+            border-radius: var(--radius-lg);
+            padding: 20px;
+            margin-bottom: 16px;
+            border: 1px solid var(--border-color);
+            transition: all var(--transition-normal);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        .rm-card:hover {
+            border-color: var(--border-glow);
+            transform: translateY(-2px);
+        }
+        
+        .rm-info {
+            flex: 1;
+        }
+        
+        .rm-nombre {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 8px;
+        }
+        
+        .rm-valor {
+            font-size: 28px;
+            font-weight: 800;
+            color: #10b981;
+        }
+        
+        .rm-fecha {
+            font-size: 11px;
+            color: var(--text-disabled);
+            margin-top: 5px;
+        }
+        
+        .rm-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .btn-editar {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+        }
+        
+        .btn-editar:hover {
+            background: #2563eb;
+            transform: scale(1.02);
+        }
+        
+        .btn-eliminar {
+            background: #dc2626;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+        }
+        
+        .btn-eliminar:hover {
+            background: #b91c1c;
+            transform: scale(1.02);
+        }
+        
+        .btn-nuevo {
+            background: var(--primary);
+            color: var(--bg-primary);
+            border: none;
+            padding: 12px 24px;
+            border-radius: var(--radius-full);
+            font-weight: 700;
+            cursor: pointer;
+            transition: all var(--transition-normal);
+            margin-bottom: 20px;
+        }
+        
+        .btn-nuevo:hover {
+            transform: scale(1.02);
+            box-shadow: var(--shadow-glow);
+        }
+        
+        .buscar-input {
+            width: 100%;
+            padding: 12px 16px;
+            margin-bottom: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            color: var(--text-primary);
+            font-size: 14px;
+        }
+        
+        .buscar-input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-secondary);
+        }
+        
+        .empty-state i {
+            font-size: 48px;
+            color: var(--primary);
+            margin-bottom: 16px;
+        }
+        
+        /* Modal */
+        .modal-content select, .modal-content input {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border-color);
+            background: rgba(0, 0, 0, 0.4);
+            color: var(--text-primary);
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+        }
+        
+        @media (max-width: 768px) {
+            .rm-card {
+                flex-direction: column;
+                text-align: center;
+            }
+            .rm-actions {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+    </style>
 </head>
 <body>
-<div class="header">
-    <h2>🏋️ Mis Registros (RM)</h2>
-    <button class="btn-salir" onclick="cerrarSesion()">Salir</button>
+<div class="container">
+    <div class="header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; flex-wrap: wrap; gap: 15px;">
+        <h2><i class="fas fa-chart-simple" style="color: var(--primary);"></i> Mis Registros (RM)</h2>
+        <button class="btn-salir" onclick="cerrarSesion()"><i class="fas fa-sign-out-alt"></i> Salir</button>
+    </div>
+
+    <nav>
+        <a href="/cliente/perfil"><i class="fas fa-user"></i> Mi Perfil</a>
+        <a href="/cliente/clases"><i class="fas fa-calendar-alt"></i> Clases</a>
+        <a href="/cliente/mis-reservas"><i class="fas fa-bookmark"></i> Mis Reservas</a>
+        <a href="/cliente/rm"><i class="fas fa-chart-simple"></i> Mis RM</a>
+    </nav>
+
+    <button class="btn-nuevo" onclick="abrirModalRM()"><i class="fas fa-plus"></i> Nuevo RM</button>
+
+    <input type="text" id="buscador" class="buscar-input" placeholder="🔍 Buscar habilidad...">
+
+    <div id="rmContainer">
+        <div class="loading">
+            <i class="fas fa-spinner fa-pulse"></i>
+            <p>Cargando tus registros...</p>
+        </div>
+    </div>
+    <p id="msg" class="error"></p>
 </div>
-
-<nav>
-    <a href="/cliente/perfil">Mi Perfil</a>
-    <a href="/cliente/clases">Clases</a>
-    <a href="/cliente/mis-reservas">Mis Reservas</a>
-    <a href="/cliente/rm">Mis RM</a>
-</nav>
-
-<div style="margin-bottom:20px; display:flex; gap:10px; flex-wrap:wrap;">
-    <button onclick="abrirModalRM()" style="background:#00aa55;">+ Nuevo RM</button>
-</div>
-
-<input type="text" id="buscador" class="buscar" placeholder="🔍 Buscar habilidad...">
-
-<div id="rmContainer"></div>
-<p id="msg" class="error"></p>
 
 <!-- Modal Nuevo/Editar RM -->
 <div id="modalRM" class="modal">
     <div class="modal-content">
         <span class="cerrar" onclick="cerrarModalRM()">&times;</span>
-        <h3 id="modalTituloRM">Nuevo RM</h3>
+        <h3 id="modalTituloRM"><i class="fas fa-dumbbell" style="color: var(--primary);"></i> Nuevo RM</h3>
         <input type="hidden" id="rmId">
         <select id="habilidadId"></select>
         <input type="number" id="pesoKg" placeholder="Peso (kg)" step="0.5">
-        <button onclick="guardarRM()">Guardar</button>
+        <button onclick="guardarRM()" style="width: 100%; margin-top: 15px;"><i class="fas fa-save"></i> Guardar</button>
     </div>
 </div>
 
@@ -50,23 +212,49 @@ if (!clienteEmail) {
 let habilidades = [];
 let rmRecords = [];
 
+// ============================================
+// CARGAR HABILIDADES PRIMERO
+// ============================================
 async function cargarHabilidades() {
-    const res = await fetch('/api/habilidades');
-    habilidades = await res.json();
-    console.log("📢 Habilidades cargadas:", habilidades);  // 👈 Agrega esto
-    const select = document.getElementById('habilidadId');
-    select.innerHTML = '';
-    habilidades.forEach(h => {
-        select.innerHTML += `<option value="${h.id}">${h.nombre_habilidad}</option>`;
-    });
+    try {
+        const res = await fetch('/api/habilidades');
+        habilidades = await res.json();
+        console.log('✅ Habilidades cargadas:', habilidades.length);
+        
+        // Llenar el select del modal
+        const select = document.getElementById('habilidadId');
+        select.innerHTML = '';
+        habilidades.forEach(h => {
+            select.innerHTML += `<option value="${h.id}">${h.nombre_habilidad}</option>`;
+        });
+    } catch (error) {
+        console.error('Error cargando habilidades:', error);
+    }
 }
 
+// ============================================
+// CARGAR RM
+// ============================================
 async function cargarRM() {
-    const res = await fetch(`/api/rm?email=${encodeURIComponent(clienteEmail)}`);
-    rmRecords = await res.json();
-    mostrarRM();
+    try {
+        const res = await fetch(`/api/rm?email=${encodeURIComponent(clienteEmail)}`);
+        rmRecords = await res.json();
+        console.log('✅ RM cargados:', rmRecords.length);
+        mostrarRM();
+    } catch (error) {
+        console.error('Error cargando RM:', error);
+        document.getElementById('rmContainer').innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-exclamation-triangle"></i>
+                <p>Error al cargar tus registros</p>
+            </div>
+        `;
+    }
 }
 
+// ============================================
+// MOSTRAR RM
+// ============================================
 function mostrarRM() {
     const container = document.getElementById('rmContainer');
     const busqueda = document.getElementById('buscador').value.toLowerCase();
@@ -82,51 +270,86 @@ function mostrarRM() {
     container.innerHTML = '';
     
     if (filtrados.length === 0) {
-        container.innerHTML = '<div class="card"><p>No tienes registros RM aún. Agrega tu primer registro.</p></div>';
+        container.innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-clipboard-list"></i>
+                <p>No tienes registros RM aún</p>
+                <p style="font-size: 12px; margin-top: 8px;">Agrega tu primer registro con el botón "Nuevo RM"</p>
+            </div>
+        `;
         return;
     }
     
     filtrados.forEach(r => {
-        // 👇 LÍNEA CORREGIDA: convertir ambos a string para comparar
         const habilidad = habilidades.find(h => String(h.id) === String(r.habilidad_id));
         
         container.innerHTML += `
-            <div class="card">
+            <div class="rm-card">
                 <div class="rm-info">
-                    <strong style="font-size:18px;">🏋️ ${habilidad ? habilidad.nombre_habilidad : `Habilidad ID: ${r.habilidad_id}`}</strong>
+                    <div class="rm-nombre">🏋️ ${habilidad ? habilidad.nombre_habilidad : 'Cargando...'}</div>
                     <div class="rm-valor">${r.peso_kg} kg</div>
-                    <div style="font-size:12px; color:#888;">${r.fecha_registro || ''}</div>
+                    <div class="rm-fecha"><i class="fas fa-calendar-alt"></i> ${r.fecha_registro || ''}</div>
                 </div>
                 <div class="rm-actions">
-                    <button class="btn-editar" onclick="editarRM(${r.id})">✏️ Editar</button>
-                    <button class="btn-eliminar" onclick="eliminarRM(${r.id})">🗑️ Eliminar</button>
+                    <button class="btn-editar" onclick="editarRM(${r.id})"><i class="fas fa-edit"></i> Editar</button>
+                    <button class="btn-eliminar" onclick="eliminarRM(${r.id})"><i class="fas fa-trash"></i> Eliminar</button>
                 </div>
             </div>
         `;
     });
 }
 
+// ============================================
+// INICIALIZAR (habilidades primero, luego RM)
+// ============================================
+async function inicializar() {
+    document.getElementById('rmContainer').innerHTML = `
+        <div class="loading">
+            <i class="fas fa-spinner fa-pulse"></i>
+            <p>Cargando...</p>
+        </div>
+    `;
+    
+    // Primero cargar habilidades
+    await cargarHabilidades();
+    
+    // Luego cargar RM
+    await cargarRM();
+}
+
+// ============================================
+// ABRIR MODAL NUEVO RM
+// ============================================
 function abrirModalRM() {
-    document.getElementById('modalTituloRM').innerText = 'Nuevo RM';
+    document.getElementById('modalTituloRM').innerHTML = '<i class="fas fa-plus" style="color: var(--primary);"></i> Nuevo RM';
     document.getElementById('rmId').value = '';
     document.getElementById('pesoKg').value = '';
     document.getElementById('modalRM').style.display = 'flex';
 }
 
+// ============================================
+// EDITAR RM
+// ============================================
 function editarRM(id) {
     const rm = rmRecords.find(r => r.id == id);
     if (!rm) return;
-    document.getElementById('modalTituloRM').innerText = 'Editar RM';
+    document.getElementById('modalTituloRM').innerHTML = '<i class="fas fa-edit" style="color: var(--primary);"></i> Editar RM';
     document.getElementById('rmId').value = rm.id;
     document.getElementById('habilidadId').value = rm.habilidad_id;
     document.getElementById('pesoKg').value = rm.peso_kg;
     document.getElementById('modalRM').style.display = 'flex';
 }
 
+// ============================================
+// CERRAR MODAL
+// ============================================
 function cerrarModalRM() {
     document.getElementById('modalRM').style.display = 'none';
 }
 
+// ============================================
+// GUARDAR RM (CREAR o EDITAR)
+// ============================================
 async function guardarRM() {
     const id = document.getElementById('rmId').value;
     const datos = {
@@ -141,7 +364,8 @@ async function guardarRM() {
     }
     
     const msg = document.getElementById('msg');
-    msg.innerHTML = '⏳ Guardando...';
+    msg.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> Guardando...';
+    msg.className = '';
     
     try {
         let res;
@@ -161,18 +385,23 @@ async function guardarRM() {
         }
         
         const data = await res.json();
+        
         if (res.ok) {
             mostrarMensaje(data.mensaje, 'exito');
             cerrarModalRM();
-            cargarRM();
+            await cargarRM(); // Recargar RM (habilidades ya están cargadas)
         } else {
             mostrarMensaje(data.error, 'error');
         }
     } catch (error) {
+        console.error('Error guardar RM:', error);
         mostrarMensaje('Error de conexión', 'error');
     }
 }
 
+// ============================================
+// ELIMINAR RM
+// ============================================
 async function eliminarRM(id) {
     if (!confirm('¿Eliminar este registro?')) return;
     
@@ -183,36 +412,48 @@ async function eliminarRM(id) {
             body: JSON.stringify({ email: clienteEmail, id: id })
         });
         const data = await res.json();
+        
         if (res.ok) {
             mostrarMensaje(data.mensaje, 'exito');
-            cargarRM();
+            await cargarRM();
         } else {
             mostrarMensaje(data.error, 'error');
         }
     } catch (error) {
+        console.error('Error eliminar RM:', error);
         mostrarMensaje('Error de conexión', 'error');
     }
 }
 
+// ============================================
+// MOSTRAR MENSAJE
+// ============================================
 function mostrarMensaje(mensaje, tipo) {
     const msg = document.getElementById('msg');
-    msg.innerHTML = tipo === 'exito' ? `✅ ${mensaje}` : `❌ ${mensaje}`;
+    msg.innerHTML = tipo === 'exito' ? `<i class="fas fa-check-circle"></i> ${mensaje}` : `<i class="fas fa-exclamation-circle"></i> ${mensaje}`;
     msg.className = tipo === 'exito' ? 'exito' : 'error';
     setTimeout(() => { msg.innerHTML = ''; }, 3000);
 }
 
+// ============================================
+// BUSCADOR
+// ============================================
+document.getElementById('buscador').addEventListener('input', () => {
+    mostrarRM();
+});
+
+// ============================================
+// CERRAR SESIÓN
+// ============================================
 function cerrarSesion() {
     localStorage.removeItem('cliente_email');
     window.location.href = '/cliente/login';
 }
 
-// Event listener para búsqueda
-document.getElementById('buscador').addEventListener('input', () => {
-    mostrarRM();
-});
-
-cargarHabilidades();
-cargarRM();
+// ============================================
+// INICIALIZAR TODO
+// ============================================
+inicializar();
 </script>
 </body>
 </html>
