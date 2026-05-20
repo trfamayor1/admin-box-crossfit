@@ -2,8 +2,6 @@ from flask import Flask, jsonify, request, send_from_directory, render_template
 from flask_cors import CORS
 import gspread
 from google.oauth2.service_account import Credentials
-from googleapiclient.discovery import build
-from googleapiclient.http import MediaFileUpload
 import json
 import os
 import tempfile
@@ -113,6 +111,9 @@ def admin_verificar():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+# ============================================
+# ADMIN - CLIENTES CRUD
+# ============================================
 @app.route('/admin/clientes', methods=['GET'])
 def admin_obtener_clientes():
     try:
@@ -214,6 +215,9 @@ def admin_eliminar_cliente(cliente_id):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+# ============================================
+# ADMIN - MEMBRESIAS
+# ============================================
 @app.route('/admin/membresias', methods=['GET'])
 def admin_obtener_membresias():
     try:
@@ -222,6 +226,9 @@ def admin_obtener_membresias():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+# ============================================
+# ADMIN - CLASES
+# ============================================
 @app.route('/admin/clases', methods=['GET'])
 def admin_obtener_clases():
     try:
@@ -256,6 +263,74 @@ def admin_eliminar_clase(clase_id):
                 return jsonify({"mensaje": "Clase eliminada"})
         return jsonify({"error": "No encontrada"}), 404
     except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# ============================================
+# ADMIN - ANUNCIOS
+# ============================================
+@app.route('/admin/anuncios', methods=['GET'])
+def admin_obtener_anuncios():
+    try:
+        sheet = get_sheet("anuncios")
+        registros = sheet.get_all_records()
+        return jsonify(registros)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/admin/anuncios', methods=['POST'])
+def admin_crear_anuncio():
+    try:
+        data = request.json
+        sheet = get_sheet("anuncios")
+        registros = sheet.get_all_records()
+        nuevo_id = len(registros) + 1
+        fecha_actual = date.today().isoformat()
+        
+        sheet.append_row([
+            nuevo_id,
+            data.get('titulo', ''),
+            data.get('texto', ''),
+            fecha_actual,
+            'TRUE'
+        ])
+        return jsonify({"mensaje": "Anuncio creado", "id": nuevo_id})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/admin/anuncios/<int:anuncio_id>', methods=['DELETE'])
+def admin_eliminar_anuncio(anuncio_id):
+    try:
+        sheet = get_sheet("anuncios")
+        registros = sheet.get_all_records()
+        for i, r in enumerate(registros, start=2):
+            if r.get('id') == anuncio_id:
+                sheet.delete_rows(i)
+                return jsonify({"mensaje": "Anuncio eliminado"})
+        return jsonify({"error": "No encontrado"}), 404
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/admin/anuncios/<int:anuncio_id>', methods=['PUT'])
+def admin_toggle_anuncio(anuncio_id):
+    try:
+        data = request.json
+        vigente = data.get('vigente', 'TRUE')
+        
+        sheet = get_sheet("anuncios")
+        registros = sheet.get_all_records()
+        
+        fila_index = None
+        for i, r in enumerate(registros, start=2):
+            if r.get('id') == anuncio_id:
+                fila_index = i
+                break
+        
+        if fila_index:
+            sheet.update_cell(fila_index, 5, vigente)
+            return jsonify({"mensaje": "Anuncio actualizado"})
+        return jsonify({"error": "Anuncio no encontrado"}), 404
+    except Exception as e:
+        print(f"Error en toggle anuncio: {e}")
         return jsonify({"error": str(e)}), 500
 
 # ============================================
@@ -322,7 +397,7 @@ def api_obtener_habilidades():
         return jsonify({"error": str(e)}), 500
 
 # ============================================
-# API PÚBLICA RM (sin autenticación)
+# API PÚBLICA RM
 # ============================================
 @app.route('/api/rm', methods=['GET'])
 def api_obtener_rm():
@@ -357,86 +432,6 @@ def api_obtener_rm():
         return jsonify(resultado)
     except Exception as e:
         return jsonify([])
-
-# ============================================
-# SUBIR FOTO DE PERFIL A GOOGLE DRIVE
-# ============================================
-def subir_foto_a_drive(archivo, nombre_archivo, folder_id):
-    try:
-        if os.environ.get('GOOGLE_CREDENTIALS'):
-            creds_dict = json.loads(os.environ.get('GOOGLE_CREDENTIALS'))
-            creds = Credentials.from_service_account_info(creds_dict, scopes=scope)
-        else:
-            creds = Credentials.from_service_account_file("credenciales.json", scopes=scope)
-        
-        drive_service = build('drive', 'v3', credentials=creds)
-        
-        file_metadata = {
-            'name': nombre_archivo,
-            'parents': [folder_id]
-        }
-        media = MediaFileUpload(archivo, mimetype='image/jpeg', resumable=True)
-        
-        file = drive_service.files().create(
-            body=file_metadata,
-            media_body=media,
-            fields='id'
-        ).execute()
-        
-        file_id = file.get('id')
-        
-        # Hacer público
-        drive_service.permissions().create(
-            fileId=file_id,
-            body={'type': 'anyone', 'role': 'reader'}
-        ).execute()
-        
-        return f"https://drive.google.com/uc?export=view&id={file_id}"
-    except Exception as e:
-        print(f"Error subiendo foto: {e}")
-        return None
-
-@app.route('/cliente/subir-foto', methods=['POST'])
-def cliente_subir_foto():
-    email = request.form.get('email')
-    foto = request.files.get('foto')
-    
-    if not email or not foto:
-        return jsonify({"error": "Email y foto son requeridos"}), 400
-    
-    if not foto.content_type.startswith('image/'):
-        return jsonify({"error": "Solo se permiten imágenes"}), 400
-    
-    with tempfile.NamedTemporaryFile(delete=False, suffix='.jpg') as tmp:
-        foto.save(tmp.name)
-        tmp_path = tmp.name
-    
-    # CAMBIA ESTO POR TU FOLDER_ID REAL
-    FOLDER_ID = "1YeK6Nok3XQo3VSgMy3YTKgBIDxOX1tOT"
-    nombre_archivo = f"foto_{email}_{datetime.now().strftime('%Y%m%d%H%M%S')}.jpg"
-    url_publica = subir_foto_a_drive(tmp_path, nombre_archivo, FOLDER_ID)
-    
-    os.unlink(tmp_path)
-    
-    if not url_publica:
-        return jsonify({"error": "Error al subir la foto"}), 500
-    
-    try:
-        sheet_clientes = get_sheet("clientes")
-        clientes = sheet_clientes.get_all_records()
-        
-        fila_cliente = None
-        for i, c in enumerate(clientes, start=2):
-            if c.get('email') == email:
-                fila_cliente = i
-                break
-        
-        if fila_cliente:
-            sheet_clientes.update_cell(fila_cliente, 6, url_publica)
-        
-        return jsonify({"mensaje": "Foto actualizada", "url": url_publica})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
 
 # ============================================
 # API CLIENTE - LOGIN Y PERFIL
@@ -491,6 +486,20 @@ def cliente_obtener_perfil():
 @app.route('/cliente/logout', methods=['POST'])
 def cliente_logout():
     return jsonify({"mensaje": "Sesión cerrada"})
+
+# ============================================
+# API CLIENTE - ANUNCIOS
+# ============================================
+@app.route('/cliente/anuncios', methods=['GET'])
+def cliente_obtener_anuncios():
+    try:
+        sheet = get_sheet("anuncios")
+        registros = sheet.get_all_records()
+        vigentes = [a for a in registros if a.get('vigente') == 'TRUE']
+        vigentes.sort(key=lambda x: x.get('fecha_publicacion', ''), reverse=True)
+        return jsonify(vigentes)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 # ============================================
 # API CLIENTE - RM (POST, PUT, DELETE)
@@ -714,25 +723,32 @@ def cliente_mis_reservas():
                 break
         if not cliente_id:
             return jsonify([])
+        
         sheet_reservas = get_sheet("reservas")
         reservas = sheet_reservas.get_all_records()
         sheet_clases = get_sheet("clases")
         clases = sheet_clases.get_all_records()
+        
+        hoy = date.today().isoformat()
+        
         resultado = []
         for r in reservas:
             if r.get('cliente_id') == cliente_id and r.get('estado') == 'confirmada':
                 for c in clases:
                     if c.get('id') == r.get('clase_id'):
-                        resultado.append({
-                            "reserva_id": r.get('id'),
-                            "clase_id": c.get('id'),
-                            "fecha": c.get('fecha'),
-                            "hora": c.get('hora')
-                        })
+                        fecha_clase = c.get('fecha', '')
+                        if fecha_clase and fecha_clase >= hoy:
+                            resultado.append({
+                                "reserva_id": r.get('id'),
+                                "clase_id": c.get('id'),
+                                "fecha": fecha_clase,
+                                "hora": c.get('hora', '')
+                            })
                         break
         return jsonify(resultado)
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        print(f"Error en mis-reservas: {e}")
+        return jsonify([])
 
 @app.route('/cliente/cancelar-reserva', methods=['POST'])
 def cliente_cancelar_reserva():
@@ -789,87 +805,6 @@ def cliente_cancelar_reserva():
         return jsonify({"mensaje": "✅ Reserva cancelada."})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
-
-# ============================================
-# API ANUNCIOS (Administrador)
-# ============================================
-@app.route('/admin/anuncios', methods=['GET'])
-def admin_obtener_anuncios():
-    try:
-        sheet = get_sheet("anuncios")
-        registros = sheet.get_all_records()
-        return jsonify(registros)
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-@app.route('/admin/anuncios', methods=['POST'])
-def admin_crear_anuncio():
-    try:
-        data = request.json
-        sheet = get_sheet("anuncios")
-        registros = sheet.get_all_records()
-        nuevo_id = len(registros) + 1
-        
-        from datetime import date
-        fecha_actual = date.today().isoformat()
-        
-        sheet.append_row([
-            nuevo_id,
-            data.get('titulo', ''),
-            data.get('texto', ''),
-            fecha_actual,
-            'TRUE'
-        ])
-        return jsonify({"mensaje": "Anuncio creado", "id": nuevo_id})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-@app.route('/admin/anuncios/<int:anuncio_id>', methods=['DELETE'])
-def admin_eliminar_anuncio(anuncio_id):
-    try:
-        sheet = get_sheet("anuncios")
-        registros = sheet.get_all_records()
-        for i, r in enumerate(registros, start=2):
-            if r.get('id') == anuncio_id:
-                sheet.delete_rows(i)
-                return jsonify({"mensaje": "Anuncio eliminado"})
-        return jsonify({"error": "No encontrado"}), 404
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-@app.route('/admin/anuncios/<int:anuncio_id>', methods=['PUT'])
-def admin_toggle_anuncio(anuncio_id):
-    """Activar/desactivar anuncio"""
-    try:
-        data = request.json
-        vigente = data.get('vigente', 'TRUE')
-        sheet = get_sheet("anuncios")
-        registros = sheet.get_all_records()
-        for i, r in enumerate(registros, start=2):
-            if r.get('id') == anuncio_id:
-                sheet.update_cell(i, 5, vigente)  # Columna E = vigente
-                return jsonify({"mensaje": "Anuncio actualizado"})
-        return jsonify({"error": "No encontrado"}), 404
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-# ============================================
-# API CLIENTE - VER ANUNCIOS
-# ============================================
-@app.route('/cliente/anuncios', methods=['GET'])
-def cliente_obtener_anuncios():
-    try:
-        sheet = get_sheet("anuncios")
-        registros = sheet.get_all_records()
-        # Solo mostrar anuncios vigentes (TRUE) y ordenados por fecha descendente
-        vigentes = [a for a in registros if a.get('vigente') == 'TRUE']
-        vigentes.sort(key=lambda x: x.get('fecha_publicacion', ''), reverse=True)
-        return jsonify(vigentes)
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-
 
 # ============================================
 # INICIAR SERVIDOR
