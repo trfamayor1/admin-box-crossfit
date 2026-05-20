@@ -1,68 +1,124 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Mi Perfil - Mi Box</title>
+    <title>Mi Perfil - Machine Box</title>
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    
+    <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Estilos globales -->
     <link rel="stylesheet" href="/static/css/style.css">
+    
+    <style>
+        .foto-container {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+        .foto-perfil {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin: 10px auto;
+            background: var(--bg-surface);
+            border: 3px solid var(--primary);
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 16px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            margin-bottom: 8px;
+        }
+        .info-label {
+            font-weight: 600;
+            color: var(--primary);
+        }
+        .info-value {
+            color: var(--text-primary);
+        }
+        .buscar-input {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .buscar-input input {
+            flex: 1;
+        }
+        .anuncio {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 10px;
+            border-left: 4px solid var(--primary);
+        }
+        .anuncio-titulo {
+            font-weight: bold;
+            color: var(--primary);
+            margin-bottom: 5px;
+        }
+        .anuncio-fecha {
+            font-size: 11px;
+            color: var(--text-disabled);
+            margin-top: 8px;
+        }
+    </style>
 </head>
 <body>
-<div class="header">
-    <h2>🏋️ Mi Perfil</h2>
-    <button class="btn-salir" onclick="cerrarSesion()">Salir</button>
-</div>
-
-<nav>
-    <a href="/cliente/perfil">Mi Perfil</a>
-    <a href="/cliente/clases">Clases</a>
-    <a href="/cliente/mis-reservas">Mis Reservas</a>
-    <a href="/cliente/rm">Mis RM</a>
-</nav>
-
-<div class="card">
-    <div class="foto-container">
-        <div class="campo-label">👤 Identificación</div>
-        <img id="fotoPerfil" class="foto-perfil" src="" alt="Avatar">
-        <p style="font-size:12px; color:#888; margin-top:5px;">
-            Identificación visual con tus iniciales
-        </p>
+<div class="container">
+    <div class="header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; flex-wrap: wrap; gap: 15px;">
+        <h2><i class="fas fa-dumbbell" style="color: var(--primary);"></i> Mi Perfil</h2>
+        <button class="btn-salir" onclick="cerrarSesion()"><i class="fas fa-sign-out-alt"></i> Salir</button>
     </div>
 
-    <div id="info" class="info">Cargando...</div>
-    <p id="errorMsg" class="error"></p>
-</div>
+    <nav>
+        <a href="/cliente/perfil"><i class="fas fa-user"></i> Mi Perfil</a>
+        <a href="/cliente/clases"><i class="fas fa-calendar-alt"></i> Clases</a>
+        <a href="/cliente/mis-reservas"><i class="fas fa-bookmark"></i> Mis Reservas</a>
+        <a href="/cliente/rm"><i class="fas fa-chart-simple"></i> Mis RM</a>
+    </nav>
 
-<div class="card">
-    <div class="campo-label" style="margin-bottom:15px;">📢 Anuncios del Box</div>
-    <div id="anunciosContainer">
-        <p>Cargando anuncios...</p>
-    </div>
-</div>
+    <div class="card">
+        <div class="foto-container">
+            <div class="campo-label">👤 Identificación</div>
+            <img id="fotoPerfil" class="foto-perfil" src="" alt="Avatar">
+            <p style="font-size:12px; color:var(--text-disabled); margin-top:5px;">
+                Identificación visual con tus iniciales
+            </p>
+        </div>
 
-<div class="card">
-    <div class="campo-label" style="margin-bottom:15px;">🔍 Ver RM de otro cliente</div>
-    <div class="buscar-input">
-        <input type="email" id="buscarEmail" placeholder="Email del cliente">
-        <button onclick="buscarRMCliente()">Buscar</button>
+        <div id="info" class="info">Cargando...</div>
+        <p id="errorMsg" class="error"></p>
     </div>
-    <div id="rmOtroCliente" style="margin-top:15px;"></div>
+
+    <div class="card">
+        <div class="campo-label" style="margin-bottom:15px;">📢 Anuncios del Box</div>
+        <div id="anunciosContainer">
+            <p>Cargando anuncios...</p>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="campo-label" style="margin-bottom:15px;">🔍 Ver RM de otro cliente</div>
+        <div class="buscar-input">
+            <input type="email" id="buscarEmail" placeholder="Email del cliente">
+            <button onclick="buscarRMCliente()"><i class="fas fa-search"></i> Buscar</button>
+        </div>
+        <div id="rmOtroCliente" style="margin-top:15px;"></div>
+    </div>
 </div>
 
 <script>
-// ============================================
-// SOLO CLIENTE - NADA DE ADMIN
-// ============================================
 const clienteEmail = localStorage.getItem('cliente_email');
-
-// Si no hay email de cliente, redirigir a login de cliente
 if (!clienteEmail) {
     window.location.href = '/cliente/login';
 }
 
-// ============================================
-// GENERAR AVATAR
-// ============================================
 function generarAvatar(nombre, email) {
     const palabras = nombre.split(' ');
     let iniciales = '';
@@ -83,9 +139,6 @@ function generarAvatar(nombre, email) {
     return `https://ui-avatars.com/api/?name=${iniciales}&background=hsl(${hue},70%,55%)&color=fff&size=120&bold=true&length=2&fontsize=0.5`;
 }
 
-// ============================================
-// CARGAR PERFIL
-// ============================================
 async function cargarPerfil() {
     const infoDiv = document.getElementById('info');
     const errorMsg = document.getElementById('errorMsg');
@@ -101,37 +154,39 @@ async function cargarPerfil() {
         
         if (response.ok) {
             infoDiv.innerHTML = `
-                <div class="campo">
-                    <div class="campo-label">🏷️ Nombre</div>
-                    <div class="campo-valor">${data.nombre || 'No registrado'}</div>
-                </div>
-                <div class="campo">
-                    <div class="campo-label">📧 Email</div>
-                    <div class="campo-valor">${data.email || 'No registrado'}</div>
-                </div>
-                <div class="campo">
-                    <div class="campo-label">📱 Celular</div>
-                    <div class="campo-valor">${data.celular || 'No registrado'}</div>
-                </div>
-                <div class="campo">
-                    <div class="campo-label">🏥 EPS</div>
-                    <div class="campo-valor">${data.eps || 'No registrado'}</div>
-                </div>
-                <div class="campo">
-                    <div class="campo-label">💳 Membresía</div>
-                    <div class="campo-valor">${data.membresia_id || 'No asignada'}</div>
-                </div>
-                <div class="campo">
-                    <div class="campo-label">📅 Clases restantes</div>
-                    <div class="campo-valor">${data.clases_restantes || 0}</div>
-                </div>
-                <div class="campo">
-                    <div class="campo-label">📆 Vencimiento</div>
-                    <div class="campo-valor">${data.fecha_vencimiento || 'No registrado'}</div>
-                </div>
-                <div class="campo">
-                    <div class="campo-label">🔓 Estado</div>
-                    <div class="campo-valor">${data.activo == 'TRUE' ? '✅ Activo' : '❌ Inactivo'}</div>
+                <div style="display: flex; flex-direction: column; gap: 12px;">
+                    <div class="info-row">
+                        <span class="info-label"><i class="fas fa-user"></i> Nombre</span>
+                        <span class="info-value">${data.nombre || 'No registrado'}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label"><i class="fas fa-envelope"></i> Email</span>
+                        <span class="info-value">${data.email || 'No registrado'}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label"><i class="fas fa-phone"></i> Celular</span>
+                        <span class="info-value">${data.celular || 'No registrado'}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label"><i class="fas fa-hospital-user"></i> EPS</span>
+                        <span class="info-value">${data.eps || 'No registrado'}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label"><i class="fas fa-tag"></i> Membresía</span>
+                        <span class="info-value">${data.membresia_id || 'No asignada'}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label"><i class="fas fa-calendar-check"></i> Clases restantes</span>
+                        <span class="info-value" style="color: #10b981; font-weight: 700;">${data.clases_restantes || 0}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label"><i class="fas fa-calendar-alt"></i> Vencimiento</span>
+                        <span class="info-value">${data.fecha_vencimiento || 'No registrado'}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label"><i class="fas fa-circle"></i> Estado</span>
+                        <span class="info-value">${data.activo == 'TRUE' ? '<span style="color:#10b981;">✅ Activo</span>' : '<span style="color:#dc2626;">❌ Inactivo</span>'}</span>
+                    </div>
                 </div>
             `;
             
@@ -150,9 +205,6 @@ async function cargarPerfil() {
     }
 }
 
-// ============================================
-// CARGAR ANUNCIOS
-// ============================================
 async function cargarAnuncios() {
     const container = document.getElementById('anunciosContainer');
     try {
@@ -160,7 +212,7 @@ async function cargarAnuncios() {
         const anuncios = await response.json();
         
         if (!anuncios || anuncios.length === 0) {
-            container.innerHTML = '<p style="color:#888;">No hay anuncios disponibles</p>';
+            container.innerHTML = '<p style="color:var(--text-disabled);">No hay anuncios disponibles</p>';
             return;
         }
         
@@ -176,24 +228,20 @@ async function cargarAnuncios() {
         }
         container.innerHTML = html;
     } catch (error) {
-        container.innerHTML = '<p style="color:#ff6666;">Error al cargar anuncios</p>';
-        console.error('Error anuncios:', error);
+        container.innerHTML = '<p style="color:#dc2626;">Error al cargar anuncios</p>';
     }
 }
 
-// ============================================
-// VER RM DE OTRO CLIENTE
-// ============================================
 async function buscarRMCliente() {
     const email = document.getElementById('buscarEmail').value;
     const container = document.getElementById('rmOtroCliente');
     
     if (!email) {
-        container.innerHTML = '<p style="color:#ff6666;">❌ Ingresa un email</p>';
+        container.innerHTML = '<p style="color:#dc2626;">❌ Ingresa un email</p>';
         return;
     }
     
-    container.innerHTML = '<p>Cargando...</p>';
+    container.innerHTML = '<p><i class="fas fa-spinner fa-pulse"></i> Cargando...</p>';
     
     try {
         const perfilRes = await fetch('/cliente/perfil', {
@@ -204,7 +252,7 @@ async function buscarRMCliente() {
         const perfilData = await perfilRes.json();
         
         if (!perfilRes.ok) {
-            container.innerHTML = `<p style="color:#ff6666;">❌ Cliente no encontrado</p>`;
+            container.innerHTML = `<p style="color:#dc2626;">❌ Cliente no encontrado</p>`;
             return;
         }
         
@@ -216,14 +264,14 @@ async function buscarRMCliente() {
             return;
         }
         
-        let html = `<div class="rm-otro">
-            <div style="font-weight:bold; color:#ff4d00; margin-bottom:10px;">🏋️ RM de ${perfilData.nombre}</div>`;
+        let html = `<div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 12px; margin-top: 10px;">
+            <div style="font-weight: bold; color: var(--primary); margin-bottom: 10px;">🏋️ RM de ${perfilData.nombre}</div>`;
         
         rmRecords.forEach(r => {
             html += `
-                <div class="rm-otro-item">
+                <div style="margin: 8px 0; padding: 8px; background: rgba(255,255,255,0.03); border-radius: 8px;">
                     <strong>${r.habilidad_nombre || 'Desconocido'}</strong>: ${r.peso_kg} kg
-                    <span style="font-size:11px; color:#888;"> (${r.fecha_registro || ''})</span>
+                    <span style="font-size: 11px; color: var(--text-disabled);"> (${r.fecha_registro || ''})</span>
                 </div>
             `;
         });
@@ -232,21 +280,15 @@ async function buscarRMCliente() {
         
     } catch (error) {
         console.error('Error:', error);
-        container.innerHTML = '<p style="color:#ff6666;">❌ Error de conexión</p>';
+        container.innerHTML = '<p style="color:#dc2626;">❌ Error de conexión</p>';
     }
 }
 
-// ============================================
-// CERRAR SESIÓN
-// ============================================
 function cerrarSesion() {
     localStorage.removeItem('cliente_email');
     window.location.href = '/cliente/login';
 }
 
-// ============================================
-// INICIALIZAR
-// ============================================
 cargarPerfil();
 cargarAnuncios();
 </script>
