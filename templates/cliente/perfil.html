@@ -23,7 +23,7 @@
             height: 120px;
             border-radius: 50%;
             object-fit: cover;
-            margin: 10px auto;
+            margin: 0 auto;
             background: var(--bg-surface);
             border: 3px solid var(--primary);
         }
@@ -49,6 +49,20 @@
         }
         .buscar-input input {
             flex: 1;
+            padding: 12px;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            background: rgba(0, 0, 0, 0.4);
+            color: var(--text-primary);
+        }
+        .buscar-input button {
+            background: var(--primary);
+            color: var(--bg-primary);
+            border: none;
+            padding: 0 20px;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
         }
         .anuncio {
             background: rgba(255, 255, 255, 0.05);
@@ -67,6 +81,12 @@
             color: var(--text-disabled);
             margin-top: 8px;
         }
+        .rm-item {
+            margin: 8px 0;
+            padding: 8px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 8px;
+        }
     </style>
 </head>
 <body>
@@ -83,19 +103,17 @@
         <a href="/cliente/rm"><i class="fas fa-chart-simple"></i> Mis RM</a>
     </nav>
 
+    <!-- Tarjeta de perfil -->
     <div class="card">
         <div class="foto-container">
-            <div class="campo-label">👤 Cliente </div>
-            <img id="fotoPerfil" class="foto-perfil" src="" alt="Avatar">
-            <p style="font-size:12px; color:var(--text-disabled); margin-top:5px;">
-                Machine App
-            </p>
+            <img id="fotoPerfil" class="foto-perfil" src="" alt="Iniciales">
         </div>
 
         <div id="info" class="info">Cargando...</div>
         <p id="errorMsg" class="error"></p>
     </div>
 
+    <!-- Tarjeta de anuncios -->
     <div class="card">
         <div class="campo-label" style="margin-bottom:15px;">📢 Anuncios del Box</div>
         <div id="anunciosContainer">
@@ -103,6 +121,7 @@
         </div>
     </div>
 
+    <!-- Tarjeta para ver RM de otro cliente -->
     <div class="card">
         <div class="campo-label" style="margin-bottom:15px;">🔍 Ver RM de otro cliente</div>
         <div class="buscar-input">
@@ -119,6 +138,9 @@ if (!clienteEmail) {
     window.location.href = '/cliente/login';
 }
 
+// ============================================
+// GENERAR AVATAR CON INICIALES
+// ============================================
 function generarAvatar(nombre, email) {
     const palabras = nombre.split(' ');
     let iniciales = '';
@@ -139,6 +161,9 @@ function generarAvatar(nombre, email) {
     return `https://ui-avatars.com/api/?name=${iniciales}&background=hsl(${hue},70%,55%)&color=fff&size=120&bold=true&length=2&fontsize=0.5`;
 }
 
+// ============================================
+// CARGAR PERFIL
+// ============================================
 async function cargarPerfil() {
     const infoDiv = document.getElementById('info');
     const errorMsg = document.getElementById('errorMsg');
@@ -205,6 +230,9 @@ async function cargarPerfil() {
     }
 }
 
+// ============================================
+// CARGAR ANUNCIOS
+// ============================================
 async function cargarAnuncios() {
     const container = document.getElementById('anunciosContainer');
     try {
@@ -232,6 +260,9 @@ async function cargarAnuncios() {
     }
 }
 
+// ============================================
+// VER RM DE OTRO CLIENTE
+// ============================================
 async function buscarRMCliente() {
     const email = document.getElementById('buscarEmail').value;
     const container = document.getElementById('rmOtroCliente');
@@ -269,7 +300,7 @@ async function buscarRMCliente() {
         
         rmRecords.forEach(r => {
             html += `
-                <div style="margin: 8px 0; padding: 8px; background: rgba(255,255,255,0.03); border-radius: 8px;">
+                <div class="rm-item">
                     <strong>${r.habilidad_nombre || 'Desconocido'}</strong>: ${r.peso_kg} kg
                     <span style="font-size: 11px; color: var(--text-disabled);"> (${r.fecha_registro || ''})</span>
                 </div>
@@ -284,11 +315,17 @@ async function buscarRMCliente() {
     }
 }
 
+// ============================================
+// CERRAR SESIÓN
+// ============================================
 function cerrarSesion() {
     localStorage.removeItem('cliente_email');
     window.location.href = '/cliente/login';
 }
 
+// ============================================
+// INICIALIZAR
+// ============================================
 cargarPerfil();
 cargarAnuncios();
 </script>
