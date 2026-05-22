@@ -379,6 +379,27 @@
             padding: 40px;
         }
         
+        .buscador-container {
+            position: relative;
+        }
+        
+        .buscador-container i {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-disabled);
+        }
+        
+        .buscador-input {
+            padding: 10px 10px 10px 35px;
+            width: 250px;
+            border-radius: var(--radius-full);
+            border: 1px solid var(--border-color);
+            background: rgba(0, 0, 0, 0.4);
+            color: var(--text-primary);
+        }
+        
         @media (max-width: 768px) {
             .cliente-info, .clase-info {
                 flex: 1;
@@ -397,6 +418,9 @@
             }
             .dias-semana {
                 justify-content: center;
+            }
+            .buscador-input {
+                width: 100%;
             }
         }
     </style>
@@ -430,8 +454,14 @@
         </div>
     </div>
 
-    <!-- Sección Clientes - Estilo Acordeón -->
-    <h3><i class="fas fa-users" style="color: var(--primary);"></i> Clientes</h3>
+    <!-- Sección Clientes - Estilo Acordeón con Buscador -->
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 15px;">
+        <h3><i class="fas fa-users" style="color: var(--primary);"></i> Clientes</h3>
+        <div class="buscador-container">
+            <i class="fas fa-search"></i>
+            <input type="text" id="buscadorClientes" class="buscador-input" placeholder="Buscar por nombre, email o celular...">
+        </div>
+    </div>
     <div id="clientesContainer" class="clientes-container">
         <div class="loading-spinner">
             <i class="fas fa-spinner fa-pulse"></i>
@@ -564,31 +594,39 @@ function mostrarMensaje(mensaje, tipo) {
 }
 
 // ============================================
-// CLIENTES - ACORDEÓN
+// CLIENTES - ACORDEÓN CON BUSCADOR
 // ============================================
-let clientes = [];
+let todosLosClientes = [];
+let clientesFiltrados = [];
 let membresias = [];
 
-async function cargarClientes() {
-    const container = document.getElementById('clientesContainer');
-    container.innerHTML = '<div class="loading-spinner"><i class="fas fa-spinner fa-pulse"></i><p>Cargando clientes...</p></div>';
+function filtrarClientes() {
+    const busqueda = document.getElementById('buscadorClientes').value.toLowerCase().trim();
     
-    const res = await fetch('/admin/clientes');
-    clientes = await res.json();
-    mostrarClientes();
+    if (!busqueda) {
+        clientesFiltrados = [...todosLosClientes];
+    } else {
+        clientesFiltrados = todosLosClientes.filter(c => {
+            return (c.nombre && c.nombre.toLowerCase().includes(busqueda)) ||
+                   (c.email && c.email.toLowerCase().includes(busqueda)) ||
+                   (c.celular && c.celular.toLowerCase().includes(busqueda));
+        });
+    }
+    
+    mostrarClientesFiltrados();
     actualizarEstadisticas();
 }
 
-function mostrarClientes() {
+function mostrarClientesFiltrados() {
     const container = document.getElementById('clientesContainer');
     container.innerHTML = '';
     
-    if (clientes.length === 0) {
-        container.innerHTML = '<div class="card" style="text-align: center;"><p>No hay clientes registrados</p></div>';
+    if (clientesFiltrados.length === 0) {
+        container.innerHTML = '<div class="card" style="text-align: center;"><p>No se encontraron clientes</p></div>';
         return;
     }
     
-    clientes.forEach(c => {
+    clientesFiltrados.forEach(c => {
         const membresia = membresias.find(m => m.id == c.membresia_id);
         const estadoClass = c.activo == 'TRUE' ? 'activo' : 'inactivo';
         const estadoText = c.activo == 'TRUE' ? '✅ Activo' : '❌ Inactivo';
@@ -657,7 +695,7 @@ function toggleCliente(id) {
 }
 
 function actualizarEstadisticas() {
-    document.getElementById('totalClientes').innerText = clientes.length;
+    document.getElementById('totalClientes').innerText = clientesFiltrados.length;
 }
 
 function verPerfilCliente(email) {
@@ -674,6 +712,17 @@ async function cargarMembresias() {
     });
 }
 
+async function cargarClientes() {
+    const container = document.getElementById('clientesContainer');
+    container.innerHTML = '<div class="loading-spinner"><i class="fas fa-spinner fa-pulse"></i><p>Cargando clientes...</p></div>';
+    
+    const res = await fetch('/admin/clientes');
+    todosLosClientes = await res.json();
+    clientesFiltrados = [...todosLosClientes];
+    mostrarClientesFiltrados();
+    actualizarEstadisticas();
+}
+
 function abrirModalCliente() {
     document.getElementById('modalTitulo').innerHTML = '<i class="fas fa-user-plus"></i> Nuevo Cliente';
     document.getElementById('clienteId').value = '';
@@ -687,7 +736,7 @@ function abrirModalCliente() {
 }
 
 function editarCliente(id) {
-    const cliente = clientes.find(c => c.id == id);
+    const cliente = todosLosClientes.find(c => c.id == id);
     if (!cliente) return;
     document.getElementById('modalTitulo').innerHTML = '<i class="fas fa-user-edit"></i> Editar Cliente';
     document.getElementById('clienteId').value = cliente.id;
@@ -1108,6 +1157,10 @@ function cerrarSesion() {
 // ============================================
 // INICIALIZAR
 // ============================================
+document.getElementById('buscadorClientes').addEventListener('input', function() {
+    filtrarClientes();
+});
+
 verificarAdmin().then(() => {
     cargarMembresias();
     cargarClientes();
