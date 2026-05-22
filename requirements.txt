@@ -4,3 +4,4 @@ gspread
 google-auth
 gunicorn
 google-api-python-client
+flask-limiter

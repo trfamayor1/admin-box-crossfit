@@ -1,20 +1,38 @@
 from flask import Flask, jsonify, request, send_from_directory, render_template
 from flask_cors import CORS
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 import gspread
 from google.oauth2.service_account import Credentials
 import json
 import os
 import tempfile
+import re
 from datetime import datetime, date, timedelta
 
 app = Flask(__name__)
 CORS(app)
 
 # ============================================
+# RATE LIMITING (protección contra ataques)
+# ============================================
+limiter = Limiter(
+    get_remote_address,
+    app=app,
+    default_limits=["200 per day", "50 per hour"],
+    storage_uri="memory://",
+)
+
+# ============================================
 # FUNCIÓN AUXILIAR
 # ============================================
 def safe_str(value):
     return '' if value is None else str(value)
+
+def validar_email(email):
+    """Valida formato de email básico"""
+    patron = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    return re.match(patron, email) is not None
 
 # ============================================
 # ANTI-CACHÉ
@@ -101,10 +119,19 @@ def admin_dashboard():
 def admin_cliente_perfil():
     return render_template('admin/cliente_perfil.html')
 
+# ============================================
+# API ADMINISTRADOR - CON RATE LIMITING
+# ============================================
 @app.route('/admin/verificar', methods=['POST'])
+@limiter.limit("10 per minute")
 def admin_verificar():
     data = request.json
     email = data.get('email')
+    
+    # Validar formato de email
+    if not validar_email(email):
+        return jsonify({"error": "Email no válido"}), 400
+    
     try:
         sheet = get_sheet("admins")
         registros = sheet.get_all_records()
@@ -483,12 +510,18 @@ def api_obtener_rm():
         return jsonify([])
 
 # ============================================
-# API CLIENTE - LOGIN Y PERFIL
+# API CLIENTE - LOGIN Y PERFIL (CON RATE LIMITING)
 # ============================================
 @app.route('/cliente/login', methods=['POST'])
+@limiter.limit("10 per minute")
 def cliente_login_post():
     data = request.json
     email = data.get('email')
+    
+    # Validar formato de email
+    if not validar_email(email):
+        return jsonify({"error": "Email no válido"}), 400
+    
     try:
         sheet = get_sheet("clientes")
         registros = sheet.get_all_records()
@@ -742,7 +775,7 @@ def cliente_otros_reservas():
         return jsonify([])
 
 # ============================================
-# API CLIENTE - DATOS PÚBLICOS DE OTRO CLIENTE (solo nombre y RM)
+# API CLIENTE - DATOS PÚBLICOS DE OTRO CLIENTE
 # ============================================
 @app.route('/cliente/datos-publicos', methods=['GET'])
 def cliente_datos_publicos():
@@ -782,8 +815,10 @@ def cliente_datos_publicos():
                 })
         
         if not rm_lista:
+            sheet_clientes = get_sheet("clientes")
+            clientes_all = sheet_clientes.get_all_records()
             cliente_id = None
-            for c in clientes:
+            for c in clientes_all:
                 if c.get('email') == email:
                     cliente_id = c.get('id')
                     break
@@ -835,6 +870,7 @@ def cliente_verificar_reserva():
         return jsonify({"reservado": False})
 
 @app.route('/cliente/reservar', methods=['POST'])
+@limiter.limit("10 per minute")
 def cliente_reservar():
     data = request.json
     email = data.get('email')
@@ -951,6 +987,7 @@ def cliente_mis_reservas():
         return jsonify([])
 
 @app.route('/cliente/cancelar-reserva', methods=['POST'])
+@limiter.limit("10 per minute")
 def cliente_cancelar_reserva():
     data = request.json
     email = data.get('email')
@@ -1006,6 +1043,9 @@ def cliente_cancelar_reserva():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+# ============================================
+# MANIFEST Y SERVICE WORKER
+# ============================================
 @app.route('/manifest.json')
 def serve_manifest():
     return send_from_directory('.', 'manifest.json')
