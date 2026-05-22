@@ -184,10 +184,22 @@
             flex-wrap: wrap;
             gap: 15px;
             margin: 15px 0;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 15px;
+            border-radius: var(--radius-md);
         }
         
         .dias-semana label {
             cursor: pointer;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 6px 12px;
+            border-radius: 20px;
+            transition: all var(--transition-fast);
+        }
+        
+        .dias-semana label:hover {
+            background: var(--primary);
+            color: var(--bg-primary);
         }
         
         .btn-ver {
@@ -280,6 +292,9 @@
             .input-group input, .input-group button {
                 width: 100%;
             }
+            .dias-semana {
+                justify-content: center;
+            }
         }
     </style>
 </head>
@@ -330,7 +345,7 @@
                 <input type="radio" name="tipoClase" value="simple" checked onchange="toggleModoClase()"> Clase única
             </label>
             <label>
-                <input type="radio" name="tipoClase" value="multiple" onchange="toggleModoClase()"> Clase múltiple (varios días)
+                <input type="radio" name="tipoClase" value="multiple" onchange="toggleModoClase()"> Clase múltiple (resto de la semana)
             </label>
         </div>
         
@@ -342,22 +357,15 @@
             <button onclick="crearClase()" class="btn-agregar"><i class="fas fa-plus"></i> Crear Clase</button>
         </div>
         
-        <!-- Modo múltiple (días de la semana) -->
+        <!-- Modo múltiple (días desde hoy hasta domingo) -->
         <div id="modoMultiple" style="display: none;">
             <div class="input-group" style="margin-bottom: 15px;">
                 <input type="time" id="clase_hora_multiple" placeholder="Hora">
                 <input type="number" id="clase_cupos_multiple" placeholder="Cupos" style="width:100px">
-                <input type="date" id="clase_fecha_inicio" placeholder="Fecha inicio">
-                <input type="date" id="clase_fecha_fin" placeholder="Fecha fin (opcional)">
             </div>
-            <div class="dias-semana">
-                <label><input type="checkbox" id="dia_lun"> Lun</label>
-                <label><input type="checkbox" id="dia_mar"> Mar</label>
-                <label><input type="checkbox" id="dia_mie"> Mié</label>
-                <label><input type="checkbox" id="dia_jue"> Jue</label>
-                <label><input type="checkbox" id="dia_vie"> Vie</label>
-                <label><input type="checkbox" id="dia_sab"> Sáb</label>
-                <label><input type="checkbox" id="dia_dom"> Dom</label>
+            <div style="margin: 15px 0;">
+                <p style="margin-bottom: 10px; color: var(--text-secondary);">📅 Selecciona los días para programar (desde hoy hasta el domingo):</p>
+                <div class="dias-semana" id="diasContainer"></div>
             </div>
             <button onclick="crearClasesMultiples()" class="btn-agregar"><i class="fas fa-calendar-week"></i> Crear Clases</button>
         </div>
@@ -663,7 +671,47 @@ function toggleModoClase() {
     } else {
         modoSimple.style.display = 'none';
         modoMultiple.style.display = 'block';
+        cargarDiasSemana(); // Cargar días dinámicamente
     }
+}
+
+function obtenerNombreDia(dia) {
+    const dias = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+    return dias[dia];
+}
+
+function cargarDiasSemana() {
+    const container = document.getElementById('diasContainer');
+    const hoy = new Date();
+    const diaSemanaHoy = hoy.getDay();
+    const domingo = new Date(hoy);
+    domingo.setDate(hoy.getDate() + (7 - diaSemanaHoy));
+    
+    const dias = [];
+    let currentDate = new Date(hoy);
+    
+    while (currentDate <= domingo) {
+        const fechaStr = currentDate.toISOString().split('T')[0];
+        const nombreDia = obtenerNombreDia(currentDate.getDay());
+        const esHoy = currentDate.toDateString() === hoy.toDateString();
+        
+        dias.push({
+            nombre: nombreDia,
+            fecha: fechaStr,
+            esHoy: esHoy
+        });
+        
+        currentDate.setDate(currentDate.getDate() + 1);
+    }
+    
+    container.innerHTML = '';
+    dias.forEach(d => {
+        container.innerHTML += `
+            <label style="margin-right: 15px;">
+                <input type="checkbox" value="${d.nombre}"> ${d.nombre.charAt(0).toUpperCase() + d.nombre.slice(1)} ${d.esHoy ? '(hoy)' : ''}
+            </label>
+        `;
+    });
 }
 
 async function crearClase() {
@@ -697,53 +745,46 @@ async function crearClase() {
 async function crearClasesMultiples() {
     const hora = document.getElementById('clase_hora_multiple').value;
     const cupos = document.getElementById('clase_cupos_multiple').value;
-    const fechaInicio = document.getElementById('clase_fecha_inicio').value;
-    const fechaFin = document.getElementById('clase_fecha_fin').value;
     
     if (!hora || !cupos) {
         mostrarMensaje("Completa hora y cupos", 'error');
         return;
     }
     
-    const dias = [];
-    if (document.getElementById('dia_lun').checked) dias.push(1);
-    if (document.getElementById('dia_mar').checked) dias.push(2);
-    if (document.getElementById('dia_mie').checked) dias.push(3);
-    if (document.getElementById('dia_jue').checked) dias.push(4);
-    if (document.getElementById('dia_vie').checked) dias.push(5);
-    if (document.getElementById('dia_sab').checked) dias.push(6);
-    if (document.getElementById('dia_dom').checked) dias.push(0);
+    // Obtener días seleccionados
+    const diasSeleccionados = [];
+    document.querySelectorAll('#diasContainer input[type="checkbox"]:checked').forEach(cb => {
+        diasSeleccionados.push(cb.value);
+    });
     
-    if (dias.length === 0) {
-        mostrarMensaje("Selecciona al menos un día de la semana", 'error');
+    if (diasSeleccionados.length === 0) {
+        mostrarMensaje("Selecciona al menos un día", 'error');
         return;
     }
     
-    let fechaInicioObj = fechaInicio ? new Date(fechaInicio) : new Date();
-    let fechaFinObj = fechaFin ? new Date(fechaFin) : null;
-    
-    if (!fechaFinObj) {
-        fechaFinObj = new Date(fechaInicioObj);
-        fechaFinObj.setDate(fechaFinObj.getDate() + 30);
-    }
+    // Obtener fechas desde hoy hasta el domingo
+    const hoy = new Date();
+    const diaSemanaHoy = hoy.getDay();
+    const domingo = new Date(hoy);
+    domingo.setDate(hoy.getDate() + (7 - diaSemanaHoy));
     
     const fechas = [];
-    let currentDate = new Date(fechaInicioObj);
+    let currentDate = new Date(hoy);
     
-    while (currentDate <= fechaFinObj) {
-        const diaSemana = currentDate.getDay();
-        if (dias.includes(diaSemana)) {
+    while (currentDate <= domingo) {
+        const nombreDia = obtenerNombreDia(currentDate.getDay());
+        if (diasSeleccionados.includes(nombreDia)) {
             fechas.push(currentDate.toISOString().split('T')[0]);
         }
         currentDate.setDate(currentDate.getDate() + 1);
     }
     
     if (fechas.length === 0) {
-        mostrarMensaje("No hay fechas en el rango seleccionado", 'error');
+        mostrarMensaje("No hay fechas en los días seleccionados", 'error');
         return;
     }
     
-    if (!confirm(`¿Crear ${fechas.length} clases? (${fechas.length} días seleccionados)`)) {
+    if (!confirm(`¿Crear ${fechas.length} clase(s)? (${fechas.length} día(s) seleccionado(s))`)) {
         return;
     }
     
@@ -774,9 +815,7 @@ async function crearClasesMultiples() {
         cargarClases();
         document.getElementById('clase_hora_multiple').value = '';
         document.getElementById('clase_cupos_multiple').value = '';
-        document.getElementById('clase_fecha_inicio').value = '';
-        document.getElementById('clase_fecha_fin').value = '';
-        document.querySelectorAll('#modoMultiple input[type="checkbox"]').forEach(cb => cb.checked = false);
+        document.querySelectorAll('#diasContainer input[type="checkbox"]').forEach(cb => cb.checked = false);
     }
 }
 
@@ -800,7 +839,7 @@ async function cargarClases() {
                 <td data-label="Acciones">
                     <button class="btn-eliminar" onclick="eliminarClase(${c.id})"><i class="fas fa-trash"></i></button>
                 </td>
-            </tr>
+            </table>
         `;
     });
 }
