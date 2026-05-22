@@ -348,6 +348,22 @@
             cursor: pointer;
         }
         
+        .btn-salir {
+            background: transparent;
+            border: 1px solid var(--text-secondary);
+            color: var(--text-secondary);
+            padding: 10px 20px;
+            border-radius: var(--radius-full);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+        }
+        
+        .btn-salir:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: none;
+        }
+        
         .stats-cards {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
@@ -380,19 +396,13 @@
         }
         
         .buscador-container {
-            position: relative;
-        }
-        
-        .buscador-container i {
-            position: absolute;
-            left: 12px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: var(--text-disabled);
+            display: flex;
+            gap: 10px;
+            align-items: center;
         }
         
         .buscador-input {
-            padding: 10px 10px 10px 35px;
+            padding: 10px 15px;
             width: 250px;
             border-radius: var(--radius-full);
             border: 1px solid var(--border-color);
@@ -418,6 +428,10 @@
             }
             .dias-semana {
                 justify-content: center;
+            }
+            .buscador-container {
+                flex-wrap: wrap;
+                width: 100%;
             }
             .buscador-input {
                 width: 100%;
@@ -458,8 +472,9 @@
     <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 15px;">
         <h3><i class="fas fa-users" style="color: var(--primary);"></i> Clientes</h3>
         <div class="buscador-container">
-            <i class="fas fa-search"></i>
-            <input type="text" id="buscadorClientes" class="buscador-input" placeholder="Buscar por nombre, email o celular...">
+            <input type="text" id="buscadorClientes" class="buscador-input" placeholder="Nombre, email o celular...">
+            <button id="btnBuscar" class="btn-agregar"><i class="fas fa-search"></i> Buscar</button>
+            <button id="btnLimpiar" class="btn-salir"><i class="fas fa-times"></i> Limpiar</button>
         </div>
     </div>
     <div id="clientesContainer" class="clientes-container">
@@ -600,7 +615,7 @@ let todosLosClientes = [];
 let clientesFiltrados = [];
 let membresias = [];
 
-function filtrarClientes() {
+function buscarClientes() {
     const busqueda = document.getElementById('buscadorClientes').value.toLowerCase().trim();
     
     if (!busqueda) {
@@ -615,6 +630,18 @@ function filtrarClientes() {
     
     mostrarClientesFiltrados();
     actualizarEstadisticas();
+    
+    if (clientesFiltrados.length === 0 && busqueda) {
+        mostrarMensaje(`No se encontraron clientes con: "${busqueda}"`, 'error');
+    }
+}
+
+function limpiarBusqueda() {
+    document.getElementById('buscadorClientes').value = '';
+    clientesFiltrados = [...todosLosClientes];
+    mostrarClientesFiltrados();
+    actualizarEstadisticas();
+    mostrarMensaje('Búsqueda limpiada', 'success');
 }
 
 function mostrarClientesFiltrados() {
@@ -622,7 +649,7 @@ function mostrarClientesFiltrados() {
     container.innerHTML = '';
     
     if (clientesFiltrados.length === 0) {
-        container.innerHTML = '<div class="card" style="text-align: center;"><p>No se encontraron clientes</p></div>';
+        container.innerHTML = '<div class="card" style="text-align: center;"><p>No hay clientes para mostrar</p></div>';
         return;
     }
     
@@ -1157,8 +1184,18 @@ function cerrarSesion() {
 // ============================================
 // INICIALIZAR
 // ============================================
-document.getElementById('buscadorClientes').addEventListener('input', function() {
-    filtrarClientes();
+document.getElementById('btnBuscar').addEventListener('click', function() {
+    buscarClientes();
+});
+
+document.getElementById('btnLimpiar').addEventListener('click', function() {
+    limpiarBusqueda();
+});
+
+document.getElementById('buscadorClientes').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        buscarClientes();
+    }
 });
 
 verificarAdmin().then(() => {
