@@ -617,15 +617,28 @@ let membresias = [];
 
 function buscarClientes() {
     const busqueda = document.getElementById('buscadorClientes').value.toLowerCase().trim();
+    console.log('🔍 Búsqueda:', busqueda);
+    console.log('📊 Total clientes:', todosLosClientes.length);
     
     if (!busqueda) {
         clientesFiltrados = [...todosLosClientes];
+        console.log('📋 Sin búsqueda, mostrando todos');
     } else {
         clientesFiltrados = todosLosClientes.filter(c => {
-            return (c.nombre && c.nombre.toLowerCase().includes(busqueda)) ||
-                   (c.email && c.email.toLowerCase().includes(busqueda)) ||
-                   (c.celular && c.celular.toLowerCase().includes(busqueda));
+            // Validar que los campos existan antes de usar toLowerCase
+            const nombre = c.nombre ? c.nombre.toLowerCase() : '';
+            const email = c.email ? c.email.toLowerCase() : '';
+            const celular = c.celular ? c.celular.toLowerCase() : '';
+            
+            const coincide = nombre.includes(busqueda) || 
+                            email.includes(busqueda) || 
+                            celular.includes(busqueda);
+            if (coincide) {
+                console.log('✅ Coincidencia:', c.nombre);
+            }
+            return coincide;
         });
+        console.log('📋 Resultados encontrados:', clientesFiltrados.length);
     }
     
     mostrarClientesFiltrados();
