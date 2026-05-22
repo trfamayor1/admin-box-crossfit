@@ -29,7 +29,7 @@
             position: relative;
         }
         
-        /* Imagen de fondo */
+        /* Imagen de fondo - se ve completa sin cortes */
         body::before {
             content: "";
             position: fixed;
@@ -38,7 +38,7 @@
             width: 100%;
             height: 100%;
             background-image: url('/static/images/fondo-login.png');
-            background-size: cover;
+            background-size: contain;
             background-position: center;
             background-repeat: no-repeat;
             background-color: #0C0B10;
@@ -124,15 +124,12 @@
             color: rgba(255, 255, 255, 0.5);
         }
         
+        /* Ajustes para móvil */
         @media (max-width: 768px) {
             .card {
                 width: 90%;
                 max-width: 320px;
                 padding: 30px 20px;
-            }
-            
-            body::before {
-                opacity: 0.9;
             }
             
             h2 {
