@@ -1182,28 +1182,47 @@ function cerrarSesion() {
 }
 
 // ============================================
+// ============================================
 // INICIALIZAR
 // ============================================
-document.getElementById('btnBuscar').addEventListener('click', function() {
-    buscarClientes();
-});
-
-document.getElementById('btnLimpiar').addEventListener('click', function() {
-    limpiarBusqueda();
-});
-
-document.getElementById('buscadorClientes').addEventListener('keypress', function(e) {
-    if (e.key === 'Enter') {
-        buscarClientes();
+// Configurar botones de búsqueda
+function configurarEventos() {
+    const btnBuscar = document.getElementById('btnBuscar');
+    const btnLimpiar = document.getElementById('btnLimpiar');
+    const buscadorInput = document.getElementById('buscadorClientes');
+    
+    if (btnBuscar) {
+        btnBuscar.onclick = function() {
+            console.log('✅ Botón Buscar clickeado');
+            buscarClientes();
+        };
     }
-});
+    
+    if (btnLimpiar) {
+        btnLimpiar.onclick = function() {
+            console.log('✅ Botón Limpiar clickeado');
+            limpiarBusqueda();
+        };
+    }
+    
+    if (buscadorInput) {
+        buscadorInput.onkeypress = function(e) {
+            if (e.key === 'Enter') {
+                console.log('✅ Enter presionado');
+                buscarClientes();
+            }
+        };
+    }
+}
 
 verificarAdmin().then(() => {
     cargarMembresias();
     cargarClientes();
     cargarClases();
     cargarAnuncios();
+    configurarEventos();
 });
+
 </script>
 </body>
 </html>
