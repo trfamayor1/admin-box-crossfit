@@ -16,7 +16,7 @@
     <link rel="stylesheet" href="/static/css/style.css">
     
     <style>
-        /* Estilos adicionales para clientes en acordeón */
+        /* Estilos para clientes en acordeón */
         .clientes-container {
             margin-top: 20px;
         }
@@ -144,7 +144,110 @@
             border-top: 1px solid var(--border-color);
         }
         
-        /* Estilos para secciones */
+        /* Estilos para clases en acordeón */
+        .clases-container {
+            margin-top: 20px;
+        }
+        
+        .clase-item {
+            background: var(--bg-card);
+            border-radius: var(--radius-lg);
+            margin-bottom: 12px;
+            border: 1px solid var(--border-color);
+            overflow: hidden;
+            transition: all var(--transition-normal);
+        }
+        
+        .clase-item:hover {
+            border-color: var(--border-glow);
+        }
+        
+        .clase-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 20px;
+            cursor: pointer;
+            background: rgba(255, 255, 255, 0.02);
+            transition: all var(--transition-fast);
+        }
+        
+        .clase-header:hover {
+            background: rgba(240, 233, 29, 0.05);
+        }
+        
+        .clase-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .clase-fecha {
+            color: var(--primary);
+            font-size: 16px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .clase-hora {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .clase-cupos {
+            font-size: 13px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            background: rgba(16, 185, 129, 0.2);
+            color: #10b981;
+        }
+        
+        .clase-cupos.lleno {
+            background: rgba(220, 38, 38, 0.2);
+            color: #dc2626;
+        }
+        
+        .clase-toggle {
+            color: var(--primary);
+            transition: transform var(--transition-fast);
+        }
+        
+        .clase-toggle.abierto {
+            transform: rotate(180deg);
+        }
+        
+        .clase-body {
+            display: none;
+            padding: 20px;
+            border-top: 1px solid var(--border-color);
+            background: rgba(0, 0, 0, 0.2);
+        }
+        
+        .clase-body.abierto {
+            display: block;
+        }
+        
+        .clase-detalle {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+        
+        .clase-acciones {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid var(--border-color);
+        }
+        
+        /* Estilos generales */
         .seccion {
             background: var(--bg-surface);
             padding: 20px;
@@ -277,13 +380,13 @@
         }
         
         @media (max-width: 768px) {
-            .cliente-info {
+            .cliente-info, .clase-info {
                 flex: 1;
             }
-            .cliente-detalle {
+            .cliente-detalle, .clase-detalle {
                 grid-template-columns: 1fr;
             }
-            .cliente-header {
+            .cliente-header, .clase-header {
                 flex-wrap: wrap;
             }
             .input-group {
@@ -371,15 +474,14 @@
         </div>
     </div>
 
+    <!-- Sección Clases Programadas - Estilo Acordeón -->
     <div class="seccion">
-        <h3><i class="fas fa-list"></i> Clases Programadas</h3>
-        <div style="overflow-x: auto;">
-            <table style="width:100%">
-                <thead>
-                    <tr><th>Fecha</th><th>Hora</th><th>Cupos</th><th>Reservados</th><th>Disponibles</th><th>Acciones</th>
-                </thead>
-                <tbody id="clasesBody"></tbody>
-            </table>
+        <h3><i class="fas fa-list" style="color: var(--primary);"></i> Clases Programadas</h3>
+        <div id="clasesContainer" class="clases-container">
+            <div class="loading-spinner">
+                <i class="fas fa-spinner fa-pulse"></i>
+                <p>Cargando clases...</p>
+            </div>
         </div>
     </div>
 
@@ -671,7 +773,7 @@ function toggleModoClase() {
     } else {
         modoSimple.style.display = 'none';
         modoMultiple.style.display = 'block';
-        cargarDiasSemana(); // Cargar días dinámicamente
+        cargarDiasSemana();
     }
 }
 
@@ -691,13 +793,11 @@ function cargarDiasSemana() {
     let currentDate = new Date(hoy);
     
     while (currentDate <= domingo) {
-        const fechaStr = currentDate.toISOString().split('T')[0];
         const nombreDia = obtenerNombreDia(currentDate.getDay());
         const esHoy = currentDate.toDateString() === hoy.toDateString();
         
         dias.push({
             nombre: nombreDia,
-            fecha: fechaStr,
             esHoy: esHoy
         });
         
@@ -707,7 +807,7 @@ function cargarDiasSemana() {
     container.innerHTML = '';
     dias.forEach(d => {
         container.innerHTML += `
-            <label style="margin-right: 15px;">
+            <label>
                 <input type="checkbox" value="${d.nombre}"> ${d.nombre.charAt(0).toUpperCase() + d.nombre.slice(1)} ${d.esHoy ? '(hoy)' : ''}
             </label>
         `;
@@ -751,7 +851,6 @@ async function crearClasesMultiples() {
         return;
     }
     
-    // Obtener días seleccionados
     const diasSeleccionados = [];
     document.querySelectorAll('#diasContainer input[type="checkbox"]:checked').forEach(cb => {
         diasSeleccionados.push(cb.value);
@@ -762,7 +861,6 @@ async function crearClasesMultiples() {
         return;
     }
     
-    // Obtener fechas desde hoy hasta el domingo
     const hoy = new Date();
     const diaSemanaHoy = hoy.getDay();
     const domingo = new Date(hoy);
@@ -819,29 +917,81 @@ async function crearClasesMultiples() {
     }
 }
 
+// ============================================
+// CLASES PROGRAMADAS - ACORDEÓN
+// ============================================
 async function cargarClases() {
+    const container = document.getElementById('clasesContainer');
+    container.innerHTML = '<div class="loading-spinner"><i class="fas fa-spinner fa-pulse"></i><p>Cargando clases...</p></div>';
+    
     const res = await fetch('/admin/clases');
     const clases = await res.json();
-    const tbody = document.getElementById('clasesBody');
-    tbody.innerHTML = '';
     
     document.getElementById('totalClasesActivas').innerText = clases.length;
     
+    container.innerHTML = '';
+    
+    if (clases.length === 0) {
+        container.innerHTML = '<div class="card" style="text-align: center;"><p>No hay clases programadas</p></div>';
+        return;
+    }
+    
     clases.forEach(c => {
         const disponibles = (c.cupos_maximos || 0) - (c.cupos_ocupados || 0);
-        tbody.innerHTML += `
-            <tr>
-                <td data-label="Fecha">${c.fecha}</td>
-                <td data-label="Hora">${c.hora}</td>
-                <td data-label="Cupos">${c.cupos_maximos}</td>
-                <td data-label="Reservados">${c.cupos_ocupados || 0}</td>
-                <td data-label="Disponibles" style="color: ${disponibles > 0 ? '#10b981' : '#dc2626'}">${disponibles}</td>
-                <td data-label="Acciones">
-                    <button class="btn-eliminar" onclick="eliminarClase(${c.id})"><i class="fas fa-trash"></i></button>
-                </td>
-            </table>
+        const estadoClass = disponibles > 0 ? '' : 'lleno';
+        const estadoText = disponibles > 0 ? `${disponibles} cupos disponibles` : 'Sin cupos';
+        
+        container.innerHTML += `
+            <div class="clase-item" id="clase-${c.id}">
+                <div class="clase-header" onclick="toggleClase(${c.id})">
+                    <div class="clase-info">
+                        <div class="clase-fecha">
+                            <i class="fas fa-calendar-day"></i> ${c.fecha || 'Sin fecha'}
+                        </div>
+                        <div class="clase-hora">
+                            <i class="fas fa-clock"></i> ${c.hora || 'Sin hora'}
+                        </div>
+                        <div class="clase-cupos ${estadoClass}">
+                            <i class="fas fa-users"></i> ${estadoText}
+                        </div>
+                    </div>
+                    <div class="clase-toggle" id="clase-toggle-${c.id}">
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                </div>
+                <div class="clase-body" id="clase-body-${c.id}">
+                    <div class="clase-detalle">
+                        <div class="detalle-item">
+                            <span class="detalle-label"><i class="fas fa-id-card"></i> ID</span>
+                            <span class="detalle-valor">${c.id}</span>
+                        </div>
+                        <div class="detalle-item">
+                            <span class="detalle-label"><i class="fas fa-users"></i> Cupos totales</span>
+                            <span class="detalle-valor">${c.cupos_maximos || 0}</span>
+                        </div>
+                        <div class="detalle-item">
+                            <span class="detalle-label"><i class="fas fa-user-check"></i> Reservados</span>
+                            <span class="detalle-valor">${c.cupos_ocupados || 0}</span>
+                        </div>
+                        <div class="detalle-item">
+                            <span class="detalle-label"><i class="fas fa-chart-line"></i> Disponibles</span>
+                            <span class="detalle-valor" style="color: ${disponibles > 0 ? '#10b981' : '#dc2626'}">${disponibles}</span>
+                        </div>
+                    </div>
+                    <div class="clase-acciones">
+                        <button class="btn-eliminar" onclick="eliminarClase(${c.id})"><i class="fas fa-trash"></i> Eliminar clase</button>
+                    </div>
+                </div>
+            </div>
         `;
     });
+}
+
+function toggleClase(id) {
+    const body = document.getElementById(`clase-body-${id}`);
+    const toggle = document.getElementById(`clase-toggle-${id}`);
+    body.classList.toggle('abierto');
+    toggle.classList.toggle('abierto');
 }
 
 async function eliminarClase(id) {
