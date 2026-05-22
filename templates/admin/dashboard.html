@@ -169,6 +169,27 @@
             flex: 1;
         }
         
+        .radio-group {
+            margin-bottom: 15px;
+            display: flex;
+            gap: 20px;
+        }
+        
+        .radio-group label {
+            cursor: pointer;
+        }
+        
+        .dias-semana {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin: 15px 0;
+        }
+        
+        .dias-semana label {
+            cursor: pointer;
+        }
+        
         .btn-ver {
             background: transparent;
             border: 1px solid var(--primary);
@@ -253,6 +274,12 @@
             .cliente-header {
                 flex-wrap: wrap;
             }
+            .input-group {
+                flex-direction: column;
+            }
+            .input-group input, .input-group button {
+                width: 100%;
+            }
         }
     </style>
 </head>
@@ -297,11 +324,42 @@
     <!-- Sección Clases -->
     <div class="seccion">
         <h3><i class="fas fa-calendar-alt" style="color: var(--primary);"></i> Crear Clase</h3>
-        <div class="input-group">
+        
+        <div class="radio-group">
+            <label>
+                <input type="radio" name="tipoClase" value="simple" checked onchange="toggleModoClase()"> Clase única
+            </label>
+            <label>
+                <input type="radio" name="tipoClase" value="multiple" onchange="toggleModoClase()"> Clase múltiple (varios días)
+            </label>
+        </div>
+        
+        <!-- Modo simple (una fecha) -->
+        <div id="modoSimple" class="input-group">
             <input type="date" id="clase_fecha">
             <input type="time" id="clase_hora">
             <input type="number" id="clase_cupos" placeholder="Cupos" style="width:100px">
             <button onclick="crearClase()" class="btn-agregar"><i class="fas fa-plus"></i> Crear Clase</button>
+        </div>
+        
+        <!-- Modo múltiple (días de la semana) -->
+        <div id="modoMultiple" style="display: none;">
+            <div class="input-group" style="margin-bottom: 15px;">
+                <input type="time" id="clase_hora_multiple" placeholder="Hora">
+                <input type="number" id="clase_cupos_multiple" placeholder="Cupos" style="width:100px">
+                <input type="date" id="clase_fecha_inicio" placeholder="Fecha inicio">
+                <input type="date" id="clase_fecha_fin" placeholder="Fecha fin (opcional)">
+            </div>
+            <div class="dias-semana">
+                <label><input type="checkbox" id="dia_lun"> Lun</label>
+                <label><input type="checkbox" id="dia_mar"> Mar</label>
+                <label><input type="checkbox" id="dia_mie"> Mié</label>
+                <label><input type="checkbox" id="dia_jue"> Jue</label>
+                <label><input type="checkbox" id="dia_vie"> Vie</label>
+                <label><input type="checkbox" id="dia_sab"> Sáb</label>
+                <label><input type="checkbox" id="dia_dom"> Dom</label>
+            </div>
+            <button onclick="crearClasesMultiples()" class="btn-agregar"><i class="fas fa-calendar-week"></i> Crear Clases</button>
         </div>
     </div>
 
@@ -592,8 +650,22 @@ async function eliminarCliente(id) {
 }
 
 // ============================================
-// CLASES
+// CLASES - MODO SIMPLE Y MÚLTIPLE
 // ============================================
+function toggleModoClase() {
+    const modo = document.querySelector('input[name="tipoClase"]:checked').value;
+    const modoSimple = document.getElementById('modoSimple');
+    const modoMultiple = document.getElementById('modoMultiple');
+    
+    if (modo === 'simple') {
+        modoSimple.style.display = 'flex';
+        modoMultiple.style.display = 'none';
+    } else {
+        modoSimple.style.display = 'none';
+        modoMultiple.style.display = 'block';
+    }
+}
+
 async function crearClase() {
     const fecha = document.getElementById('clase_fecha').value;
     const hora = document.getElementById('clase_hora').value;
@@ -619,6 +691,92 @@ async function crearClase() {
         document.getElementById('clase_cupos').value = '';
     } else {
         mostrarMensaje(data.error || 'Error al crear clase', 'error');
+    }
+}
+
+async function crearClasesMultiples() {
+    const hora = document.getElementById('clase_hora_multiple').value;
+    const cupos = document.getElementById('clase_cupos_multiple').value;
+    const fechaInicio = document.getElementById('clase_fecha_inicio').value;
+    const fechaFin = document.getElementById('clase_fecha_fin').value;
+    
+    if (!hora || !cupos) {
+        mostrarMensaje("Completa hora y cupos", 'error');
+        return;
+    }
+    
+    const dias = [];
+    if (document.getElementById('dia_lun').checked) dias.push(1);
+    if (document.getElementById('dia_mar').checked) dias.push(2);
+    if (document.getElementById('dia_mie').checked) dias.push(3);
+    if (document.getElementById('dia_jue').checked) dias.push(4);
+    if (document.getElementById('dia_vie').checked) dias.push(5);
+    if (document.getElementById('dia_sab').checked) dias.push(6);
+    if (document.getElementById('dia_dom').checked) dias.push(0);
+    
+    if (dias.length === 0) {
+        mostrarMensaje("Selecciona al menos un día de la semana", 'error');
+        return;
+    }
+    
+    let fechaInicioObj = fechaInicio ? new Date(fechaInicio) : new Date();
+    let fechaFinObj = fechaFin ? new Date(fechaFin) : null;
+    
+    if (!fechaFinObj) {
+        fechaFinObj = new Date(fechaInicioObj);
+        fechaFinObj.setDate(fechaFinObj.getDate() + 30);
+    }
+    
+    const fechas = [];
+    let currentDate = new Date(fechaInicioObj);
+    
+    while (currentDate <= fechaFinObj) {
+        const diaSemana = currentDate.getDay();
+        if (dias.includes(diaSemana)) {
+            fechas.push(currentDate.toISOString().split('T')[0]);
+        }
+        currentDate.setDate(currentDate.getDate() + 1);
+    }
+    
+    if (fechas.length === 0) {
+        mostrarMensaje("No hay fechas en el rango seleccionado", 'error');
+        return;
+    }
+    
+    if (!confirm(`¿Crear ${fechas.length} clases? (${fechas.length} días seleccionados)`)) {
+        return;
+    }
+    
+    let creadas = 0;
+    let errores = 0;
+    
+    for (const fecha of fechas) {
+        try {
+            const res = await fetch('/admin/clases', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ fecha, hora, cupos_maximos: parseInt(cupos) })
+            });
+            
+            if (res.ok) {
+                creadas++;
+            } else {
+                errores++;
+            }
+        } catch (error) {
+            errores++;
+        }
+    }
+    
+    mostrarMensaje(`✅ ${creadas} clases creadas. ${errores > 0 ? `❌ ${errores} errores.` : ''}`, creadas > 0 ? 'success' : 'error');
+    
+    if (creadas > 0) {
+        cargarClases();
+        document.getElementById('clase_hora_multiple').value = '';
+        document.getElementById('clase_cupos_multiple').value = '';
+        document.getElementById('clase_fecha_inicio').value = '';
+        document.getElementById('clase_fecha_fin').value = '';
+        document.querySelectorAll('#modoMultiple input[type="checkbox"]').forEach(cb => cb.checked = false);
     }
 }
 
