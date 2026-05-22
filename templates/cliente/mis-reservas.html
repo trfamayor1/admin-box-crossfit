@@ -14,7 +14,6 @@
     <link rel="stylesheet" href="/static/css/style.css">
     
     <style>
-        /* Estilos específicos para reservas */
         .reserva-card {
             background: var(--bg-card);
             border-radius: var(--radius-lg);
@@ -114,7 +113,6 @@
             margin-bottom: 16px;
         }
         
-        /* Modal RM */
         .modal-content {
             background: var(--bg-surface);
         }
@@ -124,6 +122,10 @@
             margin: 8px 0;
             background: rgba(255, 255, 255, 0.05);
             border-radius: var(--radius-md);
+        }
+        
+        nav a i {
+            margin-right: 8px;
         }
     </style>
 </head>
@@ -280,8 +282,6 @@ function cerrarModalRM() {
 }
 
 async function cancelarReserva(reservaId, claseId) {
-    if (!confirm('¿Cancelar esta reserva?')) return;
-    
     const msg = document.getElementById('msg');
     msg.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> Cancelando...';
     msg.className = '';

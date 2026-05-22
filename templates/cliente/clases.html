@@ -14,7 +14,6 @@
     <link rel="stylesheet" href="/static/css/style.css">
     
     <style>
-        /* Estilos específicos para clases */
         .clase-card {
             background: var(--bg-card);
             border-radius: var(--radius-lg);
@@ -107,6 +106,10 @@
             font-size: 48px;
             color: var(--primary);
             margin-bottom: 16px;
+        }
+        
+        nav a i {
+            margin-right: 8px;
         }
     </style>
 </head>
@@ -217,8 +220,6 @@ async function verificarReserva(claseId) {
 }
 
 async function reservarClase(claseId) {
-    if (!confirm('¿Reservar esta clase?')) return;
-    
     const msg = document.getElementById('msg');
     msg.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> Procesando reserva...';
     msg.className = '';
