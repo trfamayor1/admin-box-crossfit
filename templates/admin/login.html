@@ -22,40 +22,25 @@
         body {
             background: #0C0B10;
             font-family: 'Inter', sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
             min-height: 100vh;
-            position: relative;
-        }
-        
-        /* Imagen de fondo - se ve completa sin cortes */
-        body::before {
-            content: "";
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-image: url('/static/images/fondo-login.png');
-            background-size: contain;
-            background-position: center;
-            background-repeat: no-repeat;
-            background-color: #0C0B10;
-            z-index: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
         }
         
         .card {
-            background: rgba(18, 17, 24, 0.9);
+            background: rgba(18, 17, 24, 0.95);
             backdrop-filter: blur(10px);
             padding: 40px;
             border-radius: 25px;
-            width: 340px;
+            width: 100%;
+            max-width: 340px;
             text-align: center;
-            position: relative;
-            z-index: 1;
             border: 1px solid rgba(240, 233, 29, 0.3);
             box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+            margin-bottom: 30px;
         }
         
         .logo {
@@ -124,16 +109,33 @@
             color: rgba(255, 255, 255, 0.5);
         }
         
-        /* Ajustes para móvil */
+        /* Imagen debajo del formulario */
+        .imagen-fondo {
+            width: 100%;
+            max-width: 500px;
+            margin: 0 auto;
+            text-align: center;
+        }
+        
+        .imagen-fondo img {
+            width: 100%;
+            height: auto;
+            max-height: 300px;
+            object-fit: contain;
+        }
+        
         @media (max-width: 768px) {
             .card {
-                width: 90%;
-                max-width: 320px;
                 padding: 30px 20px;
+                max-width: 320px;
             }
             
             h2 {
                 font-size: 20px;
+            }
+            
+            .imagen-fondo {
+                max-width: 280px;
             }
         }
     </style>
@@ -150,6 +152,11 @@
         <div class="footer">
             <i class="fas fa-shield-alt"></i> Acceso restringido
         </div>
+    </div>
+    
+    <!-- Imagen debajo del formulario -->
+    <div class="imagen-fondo">
+        <img src="/static/images/fondo-login.png" alt="Machine Box">
     </div>
 
     <script>
