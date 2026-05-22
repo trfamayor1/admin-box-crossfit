@@ -16,79 +16,423 @@
     <link rel="stylesheet" href="/static/css/style.css">
     
     <style>
-        .clientes-container { margin-top: 20px; }
-        .cliente-item { background: var(--bg-card); border-radius: var(--radius-lg); margin-bottom: 12px; border: 1px solid var(--border-color); overflow: hidden; transition: all var(--transition-normal); }
-        .cliente-item:hover { border-color: var(--border-glow); }
-        .cliente-header { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; cursor: pointer; background: rgba(255, 255, 255, 0.02); transition: all var(--transition-fast); }
-        .cliente-header:hover { background: rgba(240, 233, 29, 0.05); }
-        .cliente-info { display: flex; align-items: center; gap: 15px; flex-wrap: wrap; }
-        .cliente-avatar { width: 45px; height: 45px; border-radius: 50%; background: var(--primary); display: flex; align-items: center; justify-content: center; font-weight: bold; color: var(--bg-primary); font-size: 18px; }
-        .cliente-nombre { font-weight: 600; font-size: 16px; }
-        .cliente-email { font-size: 13px; color: var(--text-secondary); }
-        .cliente-estado { font-size: 12px; padding: 4px 10px; border-radius: 20px; background: rgba(16, 185, 129, 0.2); color: #10b981; }
-        .cliente-estado.inactivo { background: rgba(220, 38, 38, 0.2); color: #dc2626; }
-        .cliente-toggle { color: var(--primary); transition: transform var(--transition-fast); }
-        .cliente-toggle.abierto { transform: rotate(180deg); }
-        .cliente-body { display: none; padding: 20px; border-top: 1px solid var(--border-color); background: rgba(0, 0, 0, 0.2); }
-        .cliente-body.abierto { display: block; }
-        .cliente-detalle { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 12px; margin-bottom: 20px; }
-        .detalle-item { display: flex; justify-content: space-between; padding: 10px; background: rgba(255, 255, 255, 0.03); border-radius: var(--radius-md); }
-        .detalle-label { font-weight: 600; color: var(--primary); }
-        .detalle-valor { color: var(--text-primary); }
-        .cliente-acciones { display: flex; gap: 10px; justify-content: flex-end; margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--border-color); }
+        .clientes-container {
+            margin-top: 20px;
+        }
         
-        .clases-container { margin-top: 20px; }
-        .clase-item { background: var(--bg-card); border-radius: var(--radius-lg); margin-bottom: 12px; border: 1px solid var(--border-color); overflow: hidden; transition: all var(--transition-normal); }
-        .clase-item:hover { border-color: var(--border-glow); }
-        .clase-header { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; cursor: pointer; background: rgba(255, 255, 255, 0.02); transition: all var(--transition-fast); }
-        .clase-header:hover { background: rgba(240, 233, 29, 0.05); }
-        .clase-info { display: flex; align-items: center; gap: 15px; flex-wrap: wrap; }
-        .clase-fecha { color: var(--primary); font-size: 16px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
-        .clase-hora { font-size: 18px; font-weight: 600; color: var(--text-primary); }
-        .clase-cupos { font-size: 13px; padding: 4px 10px; border-radius: 20px; background: rgba(16, 185, 129, 0.2); color: #10b981; }
-        .clase-cupos.lleno { background: rgba(220, 38, 38, 0.2); color: #dc2626; }
-        .clase-toggle { color: var(--primary); transition: transform var(--transition-fast); }
-        .clase-toggle.abierto { transform: rotate(180deg); }
-        .clase-body { display: none; padding: 20px; border-top: 1px solid var(--border-color); background: rgba(0, 0, 0, 0.2); }
-        .clase-body.abierto { display: block; }
-        .clase-detalle { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 15px; }
-        .clase-acciones { display: flex; justify-content: flex-end; gap: 10px; margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--border-color); }
+        .cliente-item {
+            background: var(--bg-card);
+            border-radius: var(--radius-lg);
+            margin-bottom: 12px;
+            border: 1px solid var(--border-color);
+            overflow: hidden;
+            transition: all var(--transition-normal);
+        }
         
-        .seccion { background: var(--bg-surface); padding: 20px; border-radius: var(--radius-lg); margin-top: 30px; border: 1px solid rgba(255, 255, 255, 0.05); }
-        .input-group { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
-        .input-group input { padding: 10px; border-radius: var(--radius-md); border: 1px solid var(--border-color); background: rgba(0, 0, 0, 0.4); color: var(--text-primary); flex: 1; }
-        .radio-group { margin-bottom: 15px; display: flex; gap: 20px; }
-        .radio-group label { cursor: pointer; }
-        .dias-semana { display: flex; flex-wrap: wrap; gap: 15px; margin: 15px 0; background: rgba(255, 255, 255, 0.05); padding: 15px; border-radius: var(--radius-md); }
-        .dias-semana label { cursor: pointer; background: rgba(0, 0, 0, 0.3); padding: 6px 12px; border-radius: 20px; transition: all var(--transition-fast); }
-        .dias-semana label:hover { background: var(--primary); color: var(--bg-primary); }
+        .cliente-item:hover {
+            border-color: var(--border-glow);
+        }
         
-        .btn-ver { background: transparent; border: 1px solid var(--primary); color: var(--primary); padding: 6px 12px; border-radius: var(--radius-full); cursor: pointer; transition: all var(--transition-fast); }
-        .btn-ver:hover { background: var(--primary); color: var(--bg-primary); }
-        .btn-editar { background: #3b82f6; color: white; border: none; padding: 6px 12px; border-radius: var(--radius-full); cursor: pointer; }
-        .btn-eliminar { background: #dc2626; color: white; border: none; padding: 6px 12px; border-radius: var(--radius-full); cursor: pointer; }
-        .btn-agregar { background: var(--primary); color: var(--bg-primary); border: none; padding: 10px 20px; border-radius: var(--radius-full); font-weight: 700; cursor: pointer; }
-        .btn-salir { background: transparent; border: 1px solid var(--text-secondary); color: var(--text-secondary); padding: 10px 20px; border-radius: var(--radius-full); font-weight: 600; cursor: pointer; transition: all var(--transition-fast); }
-        .btn-salir:hover { background: rgba(255, 255, 255, 0.1); transform: none; }
+        .cliente-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 20px;
+            cursor: pointer;
+            background: rgba(255, 255, 255, 0.02);
+            transition: all var(--transition-fast);
+        }
         
-        .stats-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 20px; margin-bottom: 30px; }
-        .stat-card { background: var(--bg-surface); border-radius: var(--radius-lg); padding: 20px; text-align: center; border: 1px solid var(--border-color); }
-        .stat-card i { font-size: 2rem; color: var(--primary); }
-        .stat-card .value { font-size: 1.8rem; font-weight: 700; color: var(--primary); }
-        .loading-spinner { text-align: center; padding: 40px; }
+        .cliente-header:hover {
+            background: rgba(240, 233, 29, 0.05);
+        }
         
-        .buscador-container { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-        .buscador-input { padding: 10px 15px; width: 250px; border-radius: var(--radius-full); border: 1px solid var(--border-color); background: rgba(0, 0, 0, 0.4); color: var(--text-primary); }
+        .cliente-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .cliente-avatar {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            background: var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: var(--bg-primary);
+            font-size: 18px;
+        }
+        
+        .cliente-nombre {
+            font-weight: 600;
+            font-size: 16px;
+        }
+        
+        .cliente-email {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+        
+        .cliente-estado {
+            font-size: 12px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            background: rgba(16, 185, 129, 0.2);
+            color: #10b981;
+        }
+        
+        .cliente-estado.inactivo {
+            background: rgba(220, 38, 38, 0.2);
+            color: #dc2626;
+        }
+        
+        .cliente-toggle {
+            color: var(--primary);
+            transition: transform var(--transition-fast);
+        }
+        
+        .cliente-toggle.abierto {
+            transform: rotate(180deg);
+        }
+        
+        .cliente-body {
+            display: none;
+            padding: 20px;
+            border-top: 1px solid var(--border-color);
+            background: rgba(0, 0, 0, 0.2);
+        }
+        
+        .cliente-body.abierto {
+            display: block;
+        }
+        
+        .cliente-detalle {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        
+        .detalle-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: var(--radius-md);
+        }
+        
+        .detalle-label {
+            font-weight: 600;
+            color: var(--primary);
+        }
+        
+        .detalle-valor {
+            color: var(--text-primary);
+        }
+        
+        .cliente-acciones {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid var(--border-color);
+        }
+        
+        .clases-container {
+            margin-top: 20px;
+        }
+        
+        .clase-item {
+            background: var(--bg-card);
+            border-radius: var(--radius-lg);
+            margin-bottom: 12px;
+            border: 1px solid var(--border-color);
+            overflow: hidden;
+            transition: all var(--transition-normal);
+        }
+        
+        .clase-item:hover {
+            border-color: var(--border-glow);
+        }
+        
+        .clase-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 20px;
+            cursor: pointer;
+            background: rgba(255, 255, 255, 0.02);
+            transition: all var(--transition-fast);
+        }
+        
+        .clase-header:hover {
+            background: rgba(240, 233, 29, 0.05);
+        }
+        
+        .clase-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .clase-fecha {
+            color: var(--primary);
+            font-size: 16px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .clase-hora {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .clase-cupos {
+            font-size: 13px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            background: rgba(16, 185, 129, 0.2);
+            color: #10b981;
+        }
+        
+        .clase-cupos.lleno {
+            background: rgba(220, 38, 38, 0.2);
+            color: #dc2626;
+        }
+        
+        .clase-toggle {
+            color: var(--primary);
+            transition: transform var(--transition-fast);
+        }
+        
+        .clase-toggle.abierto {
+            transform: rotate(180deg);
+        }
+        
+        .clase-body {
+            display: none;
+            padding: 20px;
+            border-top: 1px solid var(--border-color);
+            background: rgba(0, 0, 0, 0.2);
+        }
+        
+        .clase-body.abierto {
+            display: block;
+        }
+        
+        .clase-detalle {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+        
+        .clase-acciones {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid var(--border-color);
+        }
+        
+        .seccion {
+            background: var(--bg-surface);
+            padding: 20px;
+            border-radius: var(--radius-lg);
+            margin-top: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        
+        .input-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        
+        .input-group input {
+            padding: 10px;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border-color);
+            background: rgba(0, 0, 0, 0.4);
+            color: var(--text-primary);
+            flex: 1;
+        }
+        
+        .radio-group {
+            margin-bottom: 15px;
+            display: flex;
+            gap: 20px;
+        }
+        
+        .radio-group label {
+            cursor: pointer;
+        }
+        
+        .dias-semana {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin: 15px 0;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 15px;
+            border-radius: var(--radius-md);
+        }
+        
+        .dias-semana label {
+            cursor: pointer;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 6px 12px;
+            border-radius: 20px;
+            transition: all var(--transition-fast);
+        }
+        
+        .dias-semana label:hover {
+            background: var(--primary);
+            color: var(--bg-primary);
+        }
+        
+        .btn-ver {
+            background: transparent;
+            border: 1px solid var(--primary);
+            color: var(--primary);
+            padding: 6px 12px;
+            border-radius: var(--radius-full);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+        }
+        
+        .btn-ver:hover {
+            background: var(--primary);
+            color: var(--bg-primary);
+        }
+        
+        .btn-editar {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: var(--radius-full);
+            cursor: pointer;
+        }
+        
+        .btn-eliminar {
+            background: #dc2626;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: var(--radius-full);
+            cursor: pointer;
+        }
+        
+        .btn-agregar {
+            background: var(--primary);
+            color: var(--bg-primary);
+            border: none;
+            padding: 10px 20px;
+            border-radius: var(--radius-full);
+            font-weight: 700;
+            cursor: pointer;
+        }
+        
+        .btn-salir {
+            background: transparent;
+            border: 1px solid var(--text-secondary);
+            color: var(--text-secondary);
+            padding: 10px 20px;
+            border-radius: var(--radius-full);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+        }
+        
+        .btn-salir:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: none;
+        }
+        
+        .stats-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: var(--bg-surface);
+            border-radius: var(--radius-lg);
+            padding: 20px;
+            text-align: center;
+            border: 1px solid var(--border-color);
+        }
+        
+        .stat-card i {
+            font-size: 2rem;
+            color: var(--primary);
+        }
+        
+        .stat-card .value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+        
+        .loading-spinner {
+            text-align: center;
+            padding: 40px;
+        }
+        
+        .buscador-container {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .buscador-input {
+            padding: 10px 15px;
+            width: 250px;
+            border-radius: var(--radius-full);
+            border: 1px solid var(--border-color);
+            background: rgba(0, 0, 0, 0.4);
+            color: var(--text-primary);
+        }
         
         @media (max-width: 768px) {
-            .cliente-info, .clase-info { flex: 1; }
-            .cliente-detalle, .clase-detalle { grid-template-columns: 1fr; }
-            .cliente-header, .clase-header { flex-wrap: wrap; }
-            .input-group { flex-direction: column; }
-            .input-group input, .input-group button { width: 100%; }
-            .dias-semana { justify-content: center; }
-            .buscador-container { width: 100%; }
-            .buscador-input { width: 100%; }
+            .cliente-info, .clase-info {
+                flex: 1;
+            }
+            .cliente-detalle, .clase-detalle {
+                grid-template-columns: 1fr;
+            }
+            .cliente-header, .clase-header {
+                flex-wrap: wrap;
+            }
+            .input-group {
+                flex-direction: column;
+            }
+            .input-group input, .input-group button {
+                width: 100%;
+            }
+            .dias-semana {
+                justify-content: center;
+            }
+            .buscador-container {
+                width: 100%;
+            }
+            .buscador-input {
+                width: 100%;
+            }
         }
     </style>
 </head>
@@ -104,12 +448,24 @@
 
     <!-- Tarjetas de estadísticas -->
     <div class="stats-cards">
-        <div class="stat-card"><i class="fas fa-users"></i><div class="value" id="totalClientes">0</div><div>Total Clientes</div></div>
-        <div class="stat-card"><i class="fas fa-calendar-check"></i><div class="value" id="totalClasesActivas">0</div><div>Clases Activas</div></div>
-        <div class="stat-card"><i class="fas fa-bullhorn"></i><div class="value" id="totalAnuncios">0</div><div>Anuncios</div></div>
+        <div class="stat-card">
+            <i class="fas fa-users"></i>
+            <div class="value" id="totalClientes">0</div>
+            <div>Total Clientes</div>
+        </div>
+        <div class="stat-card">
+            <i class="fas fa-calendar-check"></i>
+            <div class="value" id="totalClasesActivas">0</div>
+            <div>Clases Activas</div>
+        </div>
+        <div class="stat-card">
+            <i class="fas fa-bullhorn"></i>
+            <div class="value" id="totalAnuncios">0</div>
+            <div>Anuncios</div>
+        </div>
     </div>
 
-    <!-- Sección Clientes -->
+    <!-- Sección Clientes - Estilo Acordeón con Buscador -->
     <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 15px;">
         <h3><i class="fas fa-users" style="color: var(--primary);"></i> Clientes</h3>
         <div class="buscador-container">
@@ -118,21 +474,33 @@
             <button id="btnLimpiar" class="btn-salir"><i class="fas fa-times"></i> Limpiar</button>
         </div>
     </div>
-    <div id="clientesContainer" class="clientes-container"><div class="loading-spinner"><i class="fas fa-spinner fa-pulse"></i><p>Cargando clientes...</p></div></div>
+    <div id="clientesContainer" class="clientes-container">
+        <div class="loading-spinner">
+            <i class="fas fa-spinner fa-pulse"></i>
+            <p>Cargando clientes...</p>
+        </div>
+    </div>
 
     <!-- Sección Clases -->
     <div class="seccion">
         <h3><i class="fas fa-calendar-alt" style="color: var(--primary);"></i> Crear Clase</h3>
+        
         <div class="radio-group">
-            <label><input type="radio" name="tipoClase" value="simple" checked onchange="toggleModoClase()"> Clase única</label>
-            <label><input type="radio" name="tipoClase" value="multiple" onchange="toggleModoClase()"> Clase múltiple (resto de la semana)</label>
+            <label>
+                <input type="radio" name="tipoClase" value="simple" checked onchange="toggleModoClase()"> Clase única
+            </label>
+            <label>
+                <input type="radio" name="tipoClase" value="multiple" onchange="toggleModoClase()"> Clase múltiple (resto de la semana)
+            </label>
         </div>
+        
         <div id="modoSimple" class="input-group">
             <input type="date" id="clase_fecha">
             <input type="time" id="clase_hora">
             <input type="number" id="clase_cupos" placeholder="Cupos" style="width:100px">
             <button onclick="crearClase()" class="btn-agregar"><i class="fas fa-plus"></i> Crear Clase</button>
         </div>
+        
         <div id="modoMultiple" style="display: none;">
             <div class="input-group" style="margin-bottom: 15px;">
                 <input type="time" id="clase_hora_multiple" placeholder="Hora">
@@ -149,7 +517,12 @@
     <!-- Sección Clases Programadas -->
     <div class="seccion">
         <h3><i class="fas fa-list" style="color: var(--primary);"></i> Clases Programadas</h3>
-        <div id="clasesContainer" class="clases-container"><div class="loading-spinner"><i class="fas fa-spinner fa-pulse"></i><p>Cargando clases...</p></div></div>
+        <div id="clasesContainer" class="clases-container">
+            <div class="loading-spinner">
+                <i class="fas fa-spinner fa-pulse"></i>
+                <p>Cargando clases...</p>
+            </div>
+        </div>
     </div>
 
     <!-- Sección Anuncios -->
@@ -162,7 +535,15 @@
         </div>
         <div style="margin-top:20px; overflow-x:auto;">
             <table style="width:100%">
-                <thead><tr><th>Título</th><th>Texto</th><th>Fecha</th><th>Vigente</th><th>Acciones</th></tr></thead>
+                <thead>
+                    <tr>
+                        <th>Título</th>
+                        <th>Texto</th>
+                        <th>Fecha</th>
+                        <th>Vigente</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
                 <tbody id="anunciosBody"></tbody>
             </table>
         </div>
@@ -181,7 +562,10 @@
         <input type="text" id="eps" placeholder="EPS">
         <select id="membresiaId"></select>
         <input type="date" id="fechaVencimiento">
-        <select id="activo"><option value="TRUE">Activo</option><option value="FALSE">Inactivo</option></select>
+        <select id="activo">
+            <option value="TRUE">Activo</option>
+            <option value="FALSE">Inactivo</option>
+        </select>
         <button onclick="guardarCliente()" class="btn-agregar" style="width:100%; margin-top:15px;"><i class="fas fa-save"></i> Guardar</button>
     </div>
 </div>
@@ -231,10 +615,9 @@ let todosLosClientes = [];
 let clientesFiltrados = [];
 let membresias = [];
 
-function getTexto(campo) {
-    if (!campo) return '';
-    if (typeof campo !== 'string') return String(campo).toLowerCase();
-    return campo.toLowerCase();
+function safeToLowerCase(valor) {
+    if (!valor) return '';
+    return String(valor).toLowerCase();
 }
 
 function buscarClientes() {
@@ -243,11 +626,14 @@ function buscarClientes() {
     if (!busqueda) {
         clientesFiltrados = [...todosLosClientes];
     } else {
-        clientesFiltrados = todosLosClientes.filter(c => {
-            const nombre = getTexto(c.nombre);
-            const email = getTexto(c.email);
-            const celular = getTexto(c.celular);
-            return nombre.includes(busqueda) || email.includes(busqueda) || celular.includes(busqueda);
+        clientesFiltrados = todosLosClientes.filter(cliente => {
+            const nombre = safeToLowerCase(cliente.nombre);
+            const email = safeToLowerCase(cliente.email);
+            const celular = safeToLowerCase(cliente.celular);
+            
+            return nombre.includes(busqueda) || 
+                   email.includes(busqueda) || 
+                   celular.includes(busqueda);
         });
     }
     
@@ -276,36 +662,59 @@ function mostrarClientesFiltrados() {
         return;
     }
     
-    clientesFiltrados.forEach(c => {
-        const membresia = (membresias || []).find(m => m.id == c.membresia_id);
-        const estadoClass = c.activo == 'TRUE' ? 'activo' : 'inactivo';
-        const estadoText = c.activo == 'TRUE' ? '✅ Activo' : '❌ Inactivo';
-        const nombreCompleto = c.nombre || 'Cliente';
+    clientesFiltrados.forEach(cliente => {
+        const membresia = (membresias || []).find(m => m.id == cliente.membresia_id);
+        const estadoClass = cliente.activo == 'TRUE' ? 'activo' : 'inactivo';
+        const estadoText = cliente.activo == 'TRUE' ? '✅ Activo' : '❌ Inactivo';
+        const nombreCompleto = cliente.nombre || 'Cliente';
         const iniciales = nombreCompleto.split(' ').map(p => p[0]).join('').toUpperCase().substring(0, 2);
         
         container.innerHTML += `
-            <div class="cliente-item" id="cliente-${c.id}">
-                <div class="cliente-header" onclick="toggleCliente(${c.id})">
+            <div class="cliente-item" id="cliente-${cliente.id}">
+                <div class="cliente-header" onclick="toggleCliente(${cliente.id})">
                     <div class="cliente-info">
                         <div class="cliente-avatar">${iniciales}</div>
-                        <div><div class="cliente-nombre">${c.nombre || 'Sin nombre'}</div><div class="cliente-email">${c.email || 'Sin email'}</div></div>
+                        <div>
+                            <div class="cliente-nombre">${cliente.nombre || 'Sin nombre'}</div>
+                            <div class="cliente-email">${cliente.email || 'Sin email'}</div>
+                        </div>
                         <div class="cliente-estado ${estadoClass}">${estadoText}</div>
                     </div>
-                    <div class="cliente-toggle" id="toggle-${c.id}"><i class="fas fa-chevron-down"></i></div>
+                    <div class="cliente-toggle" id="toggle-${cliente.id}">
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
                 </div>
-                <div class="cliente-body" id="body-${c.id}">
+                <div class="cliente-body" id="body-${cliente.id}">
                     <div class="cliente-detalle">
-                        <div class="detalle-item"><span class="detalle-label"><i class="fas fa-id-card"></i> ID</span><span class="detalle-valor">${c.id}</span></div>
-                        <div class="detalle-item"><span class="detalle-label"><i class="fas fa-phone"></i> Celular</span><span class="detalle-valor">${c.celular || 'No registrado'}</span></div>
-                        <div class="detalle-item"><span class="detalle-label"><i class="fas fa-hospital-user"></i> EPS</span><span class="detalle-valor">${c.eps || 'No registrado'}</span></div>
-                        <div class="detalle-item"><span class="detalle-label"><i class="fas fa-tag"></i> Membresía</span><span class="detalle-valor">${membresia ? membresia.nombre : 'Sin membresía'}</span></div>
-                        <div class="detalle-item"><span class="detalle-label"><i class="fas fa-calendar-check"></i> Clases Rest.</span><span class="detalle-valor" style="color: ${(c.clases_restantes_mes || 0) > 0 ? '#10b981' : '#dc2626'}">${c.clases_restantes_mes || 0}</span></div>
-                        <div class="detalle-item"><span class="detalle-label"><i class="fas fa-calendar-alt"></i> Vencimiento</span><span class="detalle-valor">${c.fecha_vencimiento || 'No registrado'}</span></div>
+                        <div class="detalle-item">
+                            <span class="detalle-label"><i class="fas fa-id-card"></i> ID</span>
+                            <span class="detalle-valor">${cliente.id}</span>
+                        </div>
+                        <div class="detalle-item">
+                            <span class="detalle-label"><i class="fas fa-phone"></i> Celular</span>
+                            <span class="detalle-valor">${cliente.celular || 'No registrado'}</span>
+                        </div>
+                        <div class="detalle-item">
+                            <span class="detalle-label"><i class="fas fa-hospital-user"></i> EPS</span>
+                            <span class="detalle-valor">${cliente.eps || 'No registrado'}</span>
+                        </div>
+                        <div class="detalle-item">
+                            <span class="detalle-label"><i class="fas fa-tag"></i> Membresía</span>
+                            <span class="detalle-valor">${membresia ? membresia.nombre : 'Sin membresía'}</span>
+                        </div>
+                        <div class="detalle-item">
+                            <span class="detalle-label"><i class="fas fa-calendar-check"></i> Clases Rest.</span>
+                            <span class="detalle-valor" style="color: ${(cliente.clases_restantes_mes || 0) > 0 ? '#10b981' : '#dc2626'}">${cliente.clases_restantes_mes || 0}</span>
+                        </div>
+                        <div class="detalle-item">
+                            <span class="detalle-label"><i class="fas fa-calendar-alt"></i> Vencimiento</span>
+                            <span class="detalle-valor">${cliente.fecha_vencimiento || 'No registrado'}</span>
+                        </div>
                     </div>
                     <div class="cliente-acciones">
-                        <button class="btn-ver" onclick="verPerfilCliente('${c.email}')"><i class="fas fa-eye"></i> Ver Perfil</button>
-                        <button class="btn-editar" onclick="editarCliente(${c.id})"><i class="fas fa-edit"></i> Editar</button>
-                        <button class="btn-eliminar" onclick="eliminarCliente(${c.id})"><i class="fas fa-trash"></i> Eliminar</button>
+                        <button class="btn-ver" onclick="verPerfilCliente('${cliente.email}')"><i class="fas fa-eye"></i> Ver Perfil</button>
+                        <button class="btn-editar" onclick="editarCliente(${cliente.id})"><i class="fas fa-edit"></i> Editar</button>
+                        <button class="btn-eliminar" onclick="eliminarCliente(${cliente.id})"><i class="fas fa-trash"></i> Eliminar</button>
                     </div>
                 </div>
             </div>
@@ -318,21 +727,28 @@ function toggleCliente(id) {
     document.getElementById(`toggle-${id}`).classList.toggle('abierto');
 }
 
-function actualizarEstadisticas() { document.getElementById('totalClientes').innerText = clientesFiltrados.length; }
+function actualizarEstadisticas() {
+    document.getElementById('totalClientes').innerText = clientesFiltrados.length;
+}
 
-function verPerfilCliente(email) { window.location.href = `/admin/cliente_perfil?email=${encodeURIComponent(email)}`; }
+function verPerfilCliente(email) {
+    window.location.href = `/admin/cliente_perfil?email=${encodeURIComponent(email)}`;
+}
 
 async function cargarMembresias() {
     const res = await fetch('/admin/membresias');
     membresias = await res.json();
     const select = document.getElementById('membresiaId');
     select.innerHTML = '';
-    membresias.forEach(m => { select.innerHTML += `<option value="${m.id}">${m.nombre} (${m.clases_por_mes} clases/mes)</option>`; });
+    membresias.forEach(m => {
+        select.innerHTML += `<option value="${m.id}">${m.nombre} (${m.clases_por_mes} clases/mes)</option>`;
+    });
 }
 
 async function cargarClientes() {
     const container = document.getElementById('clientesContainer');
     container.innerHTML = '<div class="loading-spinner"><i class="fas fa-spinner fa-pulse"></i><p>Cargando clientes...</p></div>';
+    
     const res = await fetch('/admin/clientes');
     todosLosClientes = await res.json();
     clientesFiltrados = [...todosLosClientes];
@@ -367,110 +783,242 @@ function editarCliente(id) {
     document.getElementById('modalCliente').style.display = 'flex';
 }
 
-function cerrarModal() { document.getElementById('modalCliente').style.display = 'none'; }
+function cerrarModal() {
+    document.getElementById('modalCliente').style.display = 'none';
+}
 
 async function guardarCliente() {
     const id = document.getElementById('clienteId').value;
     const datos = {
-        nombre: document.getElementById('nombre').value, email: document.getElementById('email').value,
-        celular: document.getElementById('celular').value, eps: document.getElementById('eps').value,
+        nombre: document.getElementById('nombre').value,
+        email: document.getElementById('email').value,
+        celular: document.getElementById('celular').value,
+        eps: document.getElementById('eps').value,
         membresia_id: document.getElementById('membresiaId').value,
-        fecha_vencimiento: document.getElementById('fechaVencimiento').value, activo: document.getElementById('activo').value, foto_url: ''
+        fecha_vencimiento: document.getElementById('fechaVencimiento').value,
+        activo: document.getElementById('activo').value,
+        foto_url: ''
     };
+    
     let res;
     try {
-        if (id) { res = await fetch(`/admin/clientes/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(datos) }); }
-        else { res = await fetch('/admin/clientes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(datos) }); }
+        if (id) {
+            res = await fetch(`/admin/clientes/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(datos)
+            });
+        } else {
+            res = await fetch('/admin/clientes', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(datos)
+            });
+        }
         const data = await res.json();
-        if (res.ok) { mostrarMensaje(data.mensaje, 'success'); cerrarModal(); cargarClientes(); }
-        else { mostrarMensaje(data.error || 'Error al guardar', 'error'); }
-    } catch (error) { mostrarMensaje('Error de conexión', 'error'); }
+        if (res.ok) {
+            mostrarMensaje(data.mensaje, 'success');
+            cerrarModal();
+            cargarClientes();
+        } else {
+            mostrarMensaje(data.error || 'Error al guardar', 'error');
+        }
+    } catch (error) {
+        mostrarMensaje('Error de conexión', 'error');
+    }
 }
 
 async function eliminarCliente(id) {
     if (confirm('¿Eliminar este cliente?')) {
         const res = await fetch(`/admin/clientes/${id}`, { method: 'DELETE' });
         const data = await res.json();
-        if (res.ok) { mostrarMensaje(data.mensaje, 'success'); cargarClientes(); }
-        else { mostrarMensaje(data.error || 'Error al eliminar', 'error'); }
+        if (res.ok) {
+            mostrarMensaje(data.mensaje, 'success');
+            cargarClientes();
+        } else {
+            mostrarMensaje(data.error || 'Error al eliminar', 'error');
+        }
     }
 }
 
 // ============================================
-// CLASES
+// CLASES - MODO SIMPLE Y MÚLTIPLE
 // ============================================
 function toggleModoClase() {
     const modo = document.querySelector('input[name="tipoClase"]:checked').value;
-    document.getElementById('modoSimple').style.display = modo === 'simple' ? 'flex' : 'none';
+    const modoSimple = document.getElementById('modoSimple');
     const modoMultiple = document.getElementById('modoMultiple');
-    if (modo === 'multiple') { modoMultiple.style.display = 'block'; cargarDiasSemana(); }
-    else { modoMultiple.style.display = 'none'; }
+    
+    if (modo === 'simple') {
+        modoSimple.style.display = 'flex';
+        modoMultiple.style.display = 'none';
+    } else {
+        modoSimple.style.display = 'none';
+        modoMultiple.style.display = 'block';
+        cargarDiasSemana();
+    }
 }
 
-function obtenerNombreDia(dia) { return ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'][dia]; }
+function obtenerNombreDia(dia) {
+    const dias = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+    return dias[dia];
+}
 
 function cargarDiasSemana() {
     const container = document.getElementById('diasContainer');
     const hoy = new Date();
+    const diaSemanaHoy = hoy.getDay();
     const domingo = new Date(hoy);
-    domingo.setDate(hoy.getDate() + (7 - hoy.getDay()));
-    container.innerHTML = '';
+    domingo.setDate(hoy.getDate() + (7 - diaSemanaHoy));
+    
+    const dias = [];
     let currentDate = new Date(hoy);
+    
     while (currentDate <= domingo) {
-        const nombre = obtenerNombreDia(currentDate.getDay());
+        const nombreDia = obtenerNombreDia(currentDate.getDay());
         const esHoy = currentDate.toDateString() === hoy.toDateString();
-        container.innerHTML += `<label><input type="checkbox" value="${nombre}"> ${nombre.charAt(0).toUpperCase() + nombre.slice(1)} ${esHoy ? '(hoy)' : ''}</label>`;
+        dias.push({ nombre: nombreDia, esHoy: esHoy });
         currentDate.setDate(currentDate.getDate() + 1);
     }
+    
+    container.innerHTML = '';
+    dias.forEach(d => {
+        container.innerHTML += `
+            <label>
+                <input type="checkbox" value="${d.nombre}"> ${d.nombre.charAt(0).toUpperCase() + d.nombre.slice(1)} ${d.esHoy ? '(hoy)' : ''}
+            </label>
+        `;
+    });
 }
 
 async function crearClase() {
-    const fecha = document.getElementById('clase_fecha').value, hora = document.getElementById('clase_hora').value, cupos = document.getElementById('clase_cupos').value;
-    if (!fecha || !hora || !cupos) { mostrarMensaje("Completa todos los campos", 'error'); return; }
-    const res = await fetch('/admin/clases', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fecha, hora, cupos_maximos: parseInt(cupos) }) });
+    const fecha = document.getElementById('clase_fecha').value;
+    const hora = document.getElementById('clase_hora').value;
+    const cupos = document.getElementById('clase_cupos').value;
+    
+    if (!fecha || !hora || !cupos) {
+        mostrarMensaje("Completa todos los campos", 'error');
+        return;
+    }
+    
+    const res = await fetch('/admin/clases', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fecha, hora, cupos_maximos: parseInt(cupos) })
+    });
+    
     const data = await res.json();
-    if (res.ok) { mostrarMensaje(data.mensaje, 'success'); cargarClases(); document.getElementById('clase_fecha').value = ''; document.getElementById('clase_hora').value = ''; document.getElementById('clase_cupos').value = ''; }
-    else { mostrarMensaje(data.error || 'Error al crear clase', 'error'); }
+    if (res.ok) {
+        mostrarMensaje(data.mensaje, 'success');
+        cargarClases();
+        document.getElementById('clase_fecha').value = '';
+        document.getElementById('clase_hora').value = '';
+        document.getElementById('clase_cupos').value = '';
+    } else {
+        mostrarMensaje(data.error || 'Error al crear clase', 'error');
+    }
 }
 
 async function crearClasesMultiples() {
-    const hora = document.getElementById('clase_hora_multiple').value, cupos = document.getElementById('clase_cupos_multiple').value;
-    if (!hora || !cupos) { mostrarMensaje("Completa hora y cupos", 'error'); return; }
-    const diasSel = [...document.querySelectorAll('#diasContainer input:checked')].map(cb => cb.value);
-    if (diasSel.length === 0) { mostrarMensaje("Selecciona al menos un día", 'error'); return; }
-    const hoy = new Date(), domingo = new Date(hoy);
-    domingo.setDate(hoy.getDate() + (7 - hoy.getDay()));
+    const hora = document.getElementById('clase_hora_multiple').value;
+    const cupos = document.getElementById('clase_cupos_multiple').value;
+    
+    if (!hora || !cupos) {
+        mostrarMensaje("Completa hora y cupos", 'error');
+        return;
+    }
+    
+    const diasSeleccionados = [];
+    document.querySelectorAll('#diasContainer input[type="checkbox"]:checked').forEach(cb => {
+        diasSeleccionados.push(cb.value);
+    });
+    
+    if (diasSeleccionados.length === 0) {
+        mostrarMensaje("Selecciona al menos un día", 'error');
+        return;
+    }
+    
+    const hoy = new Date();
+    const diaSemanaHoy = hoy.getDay();
+    const domingo = new Date(hoy);
+    domingo.setDate(hoy.getDate() + (7 - diaSemanaHoy));
+    
     const fechas = [];
     let currentDate = new Date(hoy);
-    while (currentDate <= domingo) { if (diasSel.includes(obtenerNombreDia(currentDate.getDay()))) fechas.push(currentDate.toISOString().split('T')[0]); currentDate.setDate(currentDate.getDate() + 1); }
-    if (fechas.length === 0) { mostrarMensaje("No hay fechas en los días seleccionados", 'error'); return; }
-    if (!confirm(`¿Crear ${fechas.length} clase(s)?`)) return;
-    let creadas = 0, errores = 0;
+    
+    while (currentDate <= domingo) {
+        const nombreDia = obtenerNombreDia(currentDate.getDay());
+        if (diasSeleccionados.includes(nombreDia)) {
+            fechas.push(currentDate.toISOString().split('T')[0]);
+        }
+        currentDate.setDate(currentDate.getDate() + 1);
+    }
+    
+    if (fechas.length === 0) {
+        mostrarMensaje("No hay fechas en los días seleccionados", 'error');
+        return;
+    }
+    
+    if (!confirm(`¿Crear ${fechas.length} clase(s)?`)) {
+        return;
+    }
+    
+    let creadas = 0;
+    let errores = 0;
+    
     for (const fecha of fechas) {
         try {
-            const res = await fetch('/admin/clases', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fecha, hora, cupos_maximos: parseInt(cupos) }) });
-            res.ok ? creadas++ : errores++;
-        } catch (error) { errores++; }
+            const res = await fetch('/admin/clases', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ fecha, hora, cupos_maximos: parseInt(cupos) })
+            });
+            if (res.ok) {
+                creadas++;
+            } else {
+                errores++;
+            }
+        } catch (error) {
+            errores++;
+        }
     }
+    
     mostrarMensaje(`✅ ${creadas} clases creadas. ${errores > 0 ? `❌ ${errores} errores.` : ''}`, creadas > 0 ? 'success' : 'error');
-    if (creadas > 0) { cargarClases(); document.getElementById('clase_hora_multiple').value = ''; document.getElementById('clase_cupos_multiple').value = ''; document.querySelectorAll('#diasContainer input').forEach(cb => cb.checked = false); }
+    
+    if (creadas > 0) {
+        cargarClases();
+        document.getElementById('clase_hora_multiple').value = '';
+        document.getElementById('clase_cupos_multiple').value = '';
+        document.querySelectorAll('#diasContainer input[type="checkbox"]').forEach(cb => cb.checked = false);
+    }
 }
 
 async function cargarClases() {
     const container = document.getElementById('clasesContainer');
     container.innerHTML = '<div class="loading-spinner"><i class="fas fa-spinner fa-pulse"></i><p>Cargando clases...</p></div>';
+    
     const res = await fetch('/admin/clases');
     const clases = await res.json();
+    
     document.getElementById('totalClasesActivas').innerText = clases.length;
+    
     container.innerHTML = '';
-    if (clases.length === 0) { container.innerHTML = '<div class="card" style="text-align: center;"><p>No hay clases programadas</p></div>'; return; }
+    
+    if (clases.length === 0) {
+        container.innerHTML = '<div class="card" style="text-align: center;"><p>No hay clases programadas</p></div>';
+        return;
+    }
+    
     clases.forEach(c => {
         const disponibles = (c.cupos_maximos || 0) - (c.cupos_ocupados || 0);
         container.innerHTML += `
             <div class="clase-item" id="clase-${c.id}">
                 <div class="clase-header" onclick="toggleClase(${c.id})">
-                    <div class="clase-info"><div class="clase-fecha"><i class="fas fa-calendar-day"></i> ${c.fecha || 'Sin fecha'}</div><div class="clase-hora"><i class="fas fa-clock"></i> ${c.hora || 'Sin hora'}</div>
-                    <div class="clase-cupos ${disponibles <= 0 ? 'lleno' : ''}"><i class="fas fa-users"></i> ${disponibles > 0 ? `${disponibles} cupos disponibles` : 'Sin cupos'}</div></div>
+                    <div class="clase-info">
+                        <div class="clase-fecha"><i class="fas fa-calendar-day"></i> ${c.fecha || 'Sin fecha'}</div>
+                        <div class="clase-hora"><i class="fas fa-clock"></i> ${c.hora || 'Sin hora'}</div>
+                        <div class="clase-cupos ${disponibles <= 0 ? 'lleno' : ''}"><i class="fas fa-users"></i> ${disponibles > 0 ? `${disponibles} cupos disponibles` : 'Sin cupos'}</div>
+                    </div>
                     <div class="clase-toggle" id="clase-toggle-${c.id}"><i class="fas fa-chevron-down"></i></div>
                 </div>
                 <div class="clase-body" id="clase-body-${c.id}">
@@ -480,20 +1028,30 @@ async function cargarClases() {
                         <div class="detalle-item"><span class="detalle-label"><i class="fas fa-user-check"></i> Reservados</span><span class="detalle-valor">${c.cupos_ocupados || 0}</span></div>
                         <div class="detalle-item"><span class="detalle-label"><i class="fas fa-chart-line"></i> Disponibles</span><span class="detalle-valor" style="color: ${disponibles > 0 ? '#10b981' : '#dc2626'}">${disponibles}</span></div>
                     </div>
-                    <div class="clase-acciones"><button class="btn-eliminar" onclick="eliminarClase(${c.id})"><i class="fas fa-trash"></i> Eliminar clase</button></div>
+                    <div class="clase-acciones">
+                        <button class="btn-eliminar" onclick="eliminarClase(${c.id})"><i class="fas fa-trash"></i> Eliminar clase</button>
+                    </div>
                 </div>
-            </div>`;
+            </div>
+        `;
     });
 }
 
-function toggleClase(id) { document.getElementById(`clase-body-${id}`).classList.toggle('abierto'); document.getElementById(`clase-toggle-${id}`).classList.toggle('abierto'); }
+function toggleClase(id) {
+    document.getElementById(`clase-body-${id}`).classList.toggle('abierto');
+    document.getElementById(`clase-toggle-${id}`).classList.toggle('abierto');
+}
 
 async function eliminarClase(id) {
     if (confirm('¿Eliminar esta clase?')) {
         const res = await fetch(`/admin/clases/${id}`, { method: 'DELETE' });
         const data = await res.json();
-        if (res.ok) { mostrarMensaje(data.mensaje, 'success'); cargarClases(); }
-        else { mostrarMensaje(data.error || 'Error al eliminar', 'error'); }
+        if (res.ok) {
+            mostrarMensaje(data.mensaje, 'success');
+            cargarClases();
+        } else {
+            mostrarMensaje(data.error || 'Error al eliminar', 'error');
+        }
     }
 }
 
@@ -505,49 +1063,106 @@ async function cargarAnuncios() {
     const anuncios = await res.json();
     const tbody = document.getElementById('anunciosBody');
     tbody.innerHTML = '';
+    
     document.getElementById('totalAnuncios').innerText = anuncios.length;
+    
     anuncios.forEach(a => {
-        tbody.innerHTML += `<tr><td data-label="Título"><strong>${a.titulo || ''}</strong></td><td data-label="Texto">${a.texto || ''}</td><td data-label="Fecha">${a.fecha_publicacion || ''}</td>
-        <td data-label="Vigente"><button onclick="toggleAnuncio(${a.id}, '${a.vigente}')" style="background: ${a.vigente == 'TRUE' ? '#10b981' : '#dc2626'}; padding:5px 10px; border-radius:20px;">${a.vigente == 'TRUE' ? '✅ Activo' : '❌ Inactivo'}</button></td>
-        <td data-label="Acciones"><button class="btn-eliminar" onclick="eliminarAnuncio(${a.id})"><i class="fas fa-trash"></i></button></td></tr>`;
+        tbody.innerHTML += `
+            <tr>
+                <td data-label="Título"><strong>${a.titulo || ''}</strong></td>
+                <td data-label="Texto">${a.texto || ''}</td>
+                <td data-label="Fecha">${a.fecha_publicacion || ''}</td>
+                <td data-label="Vigente">
+                    <button onclick="toggleAnuncio(${a.id}, '${a.vigente}')" 
+                        style="background: ${a.vigente == 'TRUE' ? '#10b981' : '#dc2626'}; padding:5px 10px; border-radius:20px;">
+                        ${a.vigente == 'TRUE' ? '✅ Activo' : '❌ Inactivo'}
+                    </button>
+                </td>
+                <td data-label="Acciones">
+                    <button class="btn-eliminar" onclick="eliminarAnuncio(${a.id})"><i class="fas fa-trash"></i></button>
+                </td>
+            </tr>
+        `;
     });
 }
 
 async function crearAnuncio() {
-    const titulo = document.getElementById('anuncioTitulo').value, texto = document.getElementById('anuncioTexto').value;
-    if (!titulo || !texto) { mostrarMensaje("Completa título y texto", 'error'); return; }
-    const res = await fetch('/admin/anuncios', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ titulo, texto }) });
+    const titulo = document.getElementById('anuncioTitulo').value;
+    const texto = document.getElementById('anuncioTexto').value;
+    
+    if (!titulo || !texto) {
+        mostrarMensaje("Completa título y texto", 'error');
+        return;
+    }
+    
+    const res = await fetch('/admin/anuncios', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ titulo, texto })
+    });
+    
     const data = await res.json();
-    if (res.ok) { mostrarMensaje(data.mensaje, 'success'); document.getElementById('anuncioTitulo').value = ''; document.getElementById('anuncioTexto').value = ''; cargarAnuncios(); }
-    else { mostrarMensaje(data.error, 'error'); }
+    if (res.ok) {
+        mostrarMensaje(data.mensaje, 'success');
+        document.getElementById('anuncioTitulo').value = '';
+        document.getElementById('anuncioTexto').value = '';
+        cargarAnuncios();
+    } else {
+        mostrarMensaje(data.error, 'error');
+    }
 }
 
 async function toggleAnuncio(id, vigenteActual) {
-    const nueva = vigenteActual == 'TRUE' ? 'FALSE' : 'TRUE';
-    const res = await fetch(`/admin/anuncios/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ vigente: nueva }) });
-    if (res.ok) { mostrarMensaje('Anuncio actualizado', 'success'); cargarAnuncios(); }
-    else { mostrarMensaje('Error al actualizar', 'error'); }
+    const nuevaVigencia = vigenteActual == 'TRUE' ? 'FALSE' : 'TRUE';
+    
+    try {
+        const res = await fetch(`/admin/anuncios/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ vigente: nuevaVigencia })
+        });
+        
+        if (res.ok) {
+            mostrarMensaje('Anuncio actualizado', 'success');
+            cargarAnuncios();
+        } else {
+            mostrarMensaje('Error al actualizar', 'error');
+        }
+    } catch (error) {
+        mostrarMensaje('Error de conexión', 'error');
+    }
 }
 
 async function eliminarAnuncio(id) {
     if (confirm('¿Eliminar este anuncio?')) {
         const res = await fetch(`/admin/anuncios/${id}`, { method: 'DELETE' });
-        if (res.ok) { mostrarMensaje('Anuncio eliminado', 'success'); cargarAnuncios(); }
-        else { mostrarMensaje('Error al eliminar', 'error'); }
+        if (res.ok) {
+            mostrarMensaje('Anuncio eliminado', 'success');
+            cargarAnuncios();
+        } else {
+            mostrarMensaje('Error al eliminar', 'error');
+        }
     }
 }
 
 // ============================================
 // CERRAR SESIÓN
 // ============================================
-function cerrarSesion() { localStorage.removeItem('admin_email'); window.location.href = '/admin/login'; }
+function cerrarSesion() {
+    localStorage.removeItem('admin_email');
+    window.location.href = '/admin/login';
+}
 
 // ============================================
 // INICIALIZAR
 // ============================================
 document.getElementById('btnBuscar').onclick = buscarClientes;
 document.getElementById('btnLimpiar').onclick = limpiarBusqueda;
-document.getElementById('buscadorClientes').onkeypress = (e) => { if (e.key === 'Enter') buscarClientes(); };
+document.getElementById('buscadorClientes').onkeypress = function(e) {
+    if (e.key === 'Enter') {
+        buscarClientes();
+    }
+};
 
 verificarAdmin().then(() => {
     cargarMembresias();
