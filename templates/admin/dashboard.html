@@ -490,7 +490,7 @@
                 <input type="radio" name="tipoClase" value="simple" checked onchange="toggleModoClase()"> Clase única
             </label>
             <label>
-                <input type="radio" name="tipoClase" value="multiple" onchange="toggleModoClase()"> Clase múltiple (resto de la semana)
+                <input type="radio" name="tipoClase" value="multiple" onchange="toggleModoClase()"> Clase múltiple
             </label>
         </div>
         
@@ -507,7 +507,7 @@
                 <input type="number" id="clase_cupos_multiple" placeholder="Cupos" style="width:100px">
             </div>
             <div style="margin: 15px 0;">
-                <p style="margin-bottom: 10px; color: var(--text-secondary);">📅 Selecciona los días para programar (desde hoy hasta el domingo):</p>
+                <p style="margin-bottom: 10px; color: var(--text-secondary);">📅 Selecciona los días para programar:</p>
                 <div class="dias-semana" id="diasContainer"></div>
             </div>
             <button onclick="crearClasesMultiples()" class="btn-agregar"><i class="fas fa-calendar-week"></i> Crear Clases</button>
@@ -536,13 +536,7 @@
         <div style="margin-top:20px; overflow-x:auto;">
             <table style="width:100%">
                 <thead>
-                    <tr>
-                        <th>Título</th>
-                        <th>Texto</th>
-                        <th>Fecha</th>
-                        <th>Vigente</th>
-                        <th>Acciones</th>
-                    </tr>
+                    <tr><th>Título</th><th>Texto</th><th>Fecha</th><th>Vigente</th><th>Acciones</th>
                 </thead>
                 <tbody id="anunciosBody"></tbody>
             </table>
@@ -630,10 +624,7 @@ function buscarClientes() {
             const nombre = safeToLowerCase(cliente.nombre);
             const email = safeToLowerCase(cliente.email);
             const celular = safeToLowerCase(cliente.celular);
-            
-            return nombre.includes(busqueda) || 
-                   email.includes(busqueda) || 
-                   celular.includes(busqueda);
+            return nombre.includes(busqueda) || email.includes(busqueda) || celular.includes(busqueda);
         });
     }
     
@@ -868,8 +859,13 @@ function cargarDiasSemana() {
     const container = document.getElementById('diasContainer');
     const hoy = new Date();
     const diaSemanaHoy = hoy.getDay();
-    const domingo = new Date(hoy);
-    domingo.setDate(hoy.getDate() + (7 - diaSemanaHoy));
+    
+    let domingo = new Date(hoy);
+    if (diaSemanaHoy === 0) {
+        domingo.setDate(hoy.getDate() + 7);
+    } else {
+        domingo.setDate(hoy.getDate() + (7 - diaSemanaHoy));
+    }
     
     const dias = [];
     let currentDate = new Date(hoy);
@@ -877,7 +873,13 @@ function cargarDiasSemana() {
     while (currentDate <= domingo) {
         const nombreDia = obtenerNombreDia(currentDate.getDay());
         const esHoy = currentDate.toDateString() === hoy.toDateString();
-        dias.push({ nombre: nombreDia, esHoy: esHoy });
+        
+        dias.push({
+            nombre: nombreDia,
+            esHoy: esHoy,
+            fecha: currentDate.toISOString().split('T')[0]
+        });
+        
         currentDate.setDate(currentDate.getDate() + 1);
     }
     
@@ -940,8 +942,12 @@ async function crearClasesMultiples() {
     
     const hoy = new Date();
     const diaSemanaHoy = hoy.getDay();
-    const domingo = new Date(hoy);
-    domingo.setDate(hoy.getDate() + (7 - diaSemanaHoy));
+    let domingo = new Date(hoy);
+    if (diaSemanaHoy === 0) {
+        domingo.setDate(hoy.getDate() + 7);
+    } else {
+        domingo.setDate(hoy.getDate() + (7 - diaSemanaHoy));
+    }
     
     const fechas = [];
     let currentDate = new Date(hoy);
