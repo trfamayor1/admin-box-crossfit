@@ -772,28 +772,14 @@ function abrirModalCliente() {
 
 function editarCliente(id) {
     const cliente = todosLosClientes.find(c => c.id == id);
-    if (!cliente) {
-        mostrarMensaje("Cliente no encontrado", 'error');
-        return;
-    }
-    
+    if (!cliente) return;
     document.getElementById('modalTitulo').innerHTML = '<i class="fas fa-user-edit"></i> Editar Cliente';
     document.getElementById('clienteId').value = cliente.id;
     document.getElementById('nombre').value = cliente.nombre || '';
     document.getElementById('email').value = cliente.email || '';
     document.getElementById('celular').value = cliente.celular || '';
     document.getElementById('eps').value = cliente.eps || '';
-    
-    // Asegurar que el select de membresía se cargue correctamente
-    if (membresias && membresias.length > 0) {
-        document.getElementById('membresiaId').value = cliente.membresia_id || '';
-    } else {
-        // Esperar a que carguen las membresías
-        setTimeout(() => {
-            document.getElementById('membresiaId').value = cliente.membresia_id || '';
-        }, 500);
-    }
-    
+    document.getElementById('membresiaId').value = cliente.membresia_id || '';
     document.getElementById('fechaVencimiento').value = cliente.fecha_vencimiento || '';
     document.getElementById('activo').value = cliente.activo || 'TRUE';
     document.getElementById('modalCliente').style.display = 'flex';
@@ -971,7 +957,7 @@ async function crearClasesMultiples() {
         return;
     }
     
-    // Confirmación sin URL
+    // Confirmación sin URL de onrender
     const confirmacion = confirm(`¿Crear ${fechas.length} clase(s) para la próxima semana?`);
     if (!confirmacion) {
         return;
@@ -1006,7 +992,6 @@ async function crearClasesMultiples() {
         document.querySelectorAll('#diasContainer input[type="checkbox"]').forEach(cb => cb.checked = false);
     }
 }
-
 
 // ============================================
 // CLASES PROGRAMADAS - ACORDEÓN
