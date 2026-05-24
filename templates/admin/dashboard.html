@@ -16,6 +16,7 @@
     <link rel="stylesheet" href="/static/css/style.css">
     
     <style>
+        /* Estilos para clientes en acordeón */
         .clientes-container {
             margin-top: 20px;
         }
@@ -143,6 +144,7 @@
             border-top: 1px solid var(--border-color);
         }
         
+        /* Estilos para clases en acordeón */
         .clases-container {
             margin-top: 20px;
         }
@@ -245,6 +247,7 @@
             border-top: 1px solid var(--border-color);
         }
         
+        /* Estilos generales */
         .seccion {
             background: var(--bg-surface);
             padding: 20px;
@@ -494,6 +497,7 @@
             </label>
         </div>
         
+        <!-- Modo simple (una fecha) -->
         <div id="modoSimple" class="input-group">
             <input type="date" id="clase_fecha">
             <input type="time" id="clase_hora">
@@ -501,20 +505,21 @@
             <button onclick="crearClase()" class="btn-agregar"><i class="fas fa-plus"></i> Crear Clase</button>
         </div>
         
+        <!-- Modo múltiple (próximos 7 días) -->
         <div id="modoMultiple" style="display: none;">
             <div class="input-group" style="margin-bottom: 15px;">
                 <input type="time" id="clase_hora_multiple" placeholder="Hora">
                 <input type="number" id="clase_cupos_multiple" placeholder="Cupos" style="width:100px">
             </div>
             <div style="margin: 15px 0;">
-                <p style="margin-bottom: 10px; color: var(--text-secondary);">📅 Selecciona los días para programar:</p>
+                <p style="margin-bottom: 10px; color: var(--text-secondary);">📅 Selecciona los días para programar (próximos 7 días):</p>
                 <div class="dias-semana" id="diasContainer"></div>
             </div>
             <button onclick="crearClasesMultiples()" class="btn-agregar"><i class="fas fa-calendar-week"></i> Crear Clases</button>
         </div>
     </div>
 
-    <!-- Sección Clases Programadas -->
+    <!-- Sección Clases Programadas - Estilo Acordeón -->
     <div class="seccion">
         <h3><i class="fas fa-list" style="color: var(--primary);"></i> Clases Programadas</h3>
         <div id="clasesContainer" class="clases-container">
@@ -536,7 +541,13 @@
         <div style="margin-top:20px; overflow-x:auto;">
             <table style="width:100%">
                 <thead>
-                    <tr><th>Título</th><th>Texto</th><th>Fecha</th><th>Vigente</th><th>Acciones</th>
+                    <tr>
+                        <th>Título</th>
+                        <th>Texto</th>
+                        <th>Fecha</th>
+                        <th>Vigente</th>
+                        <th>Acciones</th>
+                    </tr>
                 </thead>
                 <tbody id="anunciosBody"></tbody>
             </table>
@@ -858,29 +869,18 @@ function obtenerNombreDia(dia) {
 function cargarDiasSemana() {
     const container = document.getElementById('diasContainer');
     const hoy = new Date();
-    const diaSemanaHoy = hoy.getDay();
-    
-    let domingo = new Date(hoy);
-    if (diaSemanaHoy === 0) {
-        domingo.setDate(hoy.getDate() + 7);
-    } else {
-        domingo.setDate(hoy.getDate() + (7 - diaSemanaHoy));
-    }
-    
     const dias = [];
-    let currentDate = new Date(hoy);
     
-    while (currentDate <= domingo) {
-        const nombreDia = obtenerNombreDia(currentDate.getDay());
-        const esHoy = currentDate.toDateString() === hoy.toDateString();
-        
+    for (let i = 0; i < 7; i++) {
+        let fecha = new Date(hoy);
+        fecha.setDate(hoy.getDate() + i);
+        const nombreDia = obtenerNombreDia(fecha.getDay());
+        const esHoy = (i === 0);
         dias.push({
             nombre: nombreDia,
             esHoy: esHoy,
-            fecha: currentDate.toISOString().split('T')[0]
+            fecha: fecha.toISOString().split('T')[0]
         });
-        
-        currentDate.setDate(currentDate.getDate() + 1);
     }
     
     container.innerHTML = '';
@@ -941,23 +941,15 @@ async function crearClasesMultiples() {
     }
     
     const hoy = new Date();
-    const diaSemanaHoy = hoy.getDay();
-    let domingo = new Date(hoy);
-    if (diaSemanaHoy === 0) {
-        domingo.setDate(hoy.getDate() + 7);
-    } else {
-        domingo.setDate(hoy.getDate() + (7 - diaSemanaHoy));
-    }
-    
     const fechas = [];
-    let currentDate = new Date(hoy);
     
-    while (currentDate <= domingo) {
-        const nombreDia = obtenerNombreDia(currentDate.getDay());
+    for (let i = 0; i < 7; i++) {
+        let fecha = new Date(hoy);
+        fecha.setDate(hoy.getDate() + i);
+        const nombreDia = obtenerNombreDia(fecha.getDay());
         if (diasSeleccionados.includes(nombreDia)) {
-            fechas.push(currentDate.toISOString().split('T')[0]);
+            fechas.push(fecha.toISOString().split('T')[0]);
         }
-        currentDate.setDate(currentDate.getDate() + 1);
     }
     
     if (fechas.length === 0) {
@@ -965,7 +957,7 @@ async function crearClasesMultiples() {
         return;
     }
     
-    if (!confirm(`¿Crear ${fechas.length} clase(s)?`)) {
+    if (!confirm(`¿Crear ${fechas.length} clase(s) para la próxima semana?`)) {
         return;
     }
     
@@ -999,6 +991,9 @@ async function crearClasesMultiples() {
     }
 }
 
+// ============================================
+// CLASES PROGRAMADAS - ACORDEÓN
+// ============================================
 async function cargarClases() {
     const container = document.getElementById('clasesContainer');
     container.innerHTML = '<div class="loading-spinner"><i class="fas fa-spinner fa-pulse"></i><p>Cargando clases...</p></div>';
