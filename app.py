@@ -14,7 +14,7 @@ app = Flask(__name__)
 CORS(app)
 
 # ============================================
-# RATE LIMITING (protección contra ataques)
+# RATE LIMITING
 # ============================================
 limiter = Limiter(
     get_remote_address,
@@ -24,13 +24,12 @@ limiter = Limiter(
 )
 
 # ============================================
-# FUNCIÓN AUXILIAR
+# FUNCIONES AUXILIARES
 # ============================================
 def safe_str(value):
     return '' if value is None else str(value)
 
 def validar_email(email):
-    """Valida formato de email básico"""
     patron = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
     return re.match(patron, email) is not None
 
@@ -120,7 +119,7 @@ def admin_cliente_perfil():
     return render_template('admin/cliente_perfil.html')
 
 # ============================================
-# API ADMINISTRADOR - CON RATE LIMITING
+# API ADMINISTRADOR
 # ============================================
 @app.route('/admin/verificar', methods=['POST'])
 @limiter.limit("10 per minute")
@@ -128,7 +127,6 @@ def admin_verificar():
     data = request.json
     email = data.get('email')
     
-    # Validar formato de email
     if not validar_email(email):
         return jsonify({"error": "Email no válido"}), 400
     
@@ -258,7 +256,7 @@ def admin_obtener_membresias():
         return jsonify({"error": str(e)}), 500
 
 # ============================================
-# ADMIN - CLASES (solo futuras o actuales)
+# ADMIN - CLASES
 # ============================================
 @app.route('/admin/clases', methods=['GET'])
 def admin_obtener_clases():
@@ -377,7 +375,7 @@ def admin_toggle_anuncio(anuncio_id):
         return jsonify({"error": str(e)}), 500
 
 # ============================================
-# ADMIN - VER RM DE CUALQUIER CLIENTE
+# ADMIN - VER RM DE CLIENTE
 # ============================================
 @app.route('/admin/rm/<string:email>', methods=['GET'])
 def admin_obtener_rm_cliente(email):
@@ -433,7 +431,7 @@ def cliente_rm_html():
     return render_template('cliente/rm.html')
 
 # ============================================
-# API PÚBLICA CLASES (24h)
+# API PÚBLICA CLASES (24h, sin duplicados)
 # ============================================
 @app.route('/api/clases', methods=['GET'])
 def api_obtener_clases():
@@ -443,7 +441,12 @@ def api_obtener_clases():
         ahora = datetime.now()
         limite_24h = ahora + timedelta(hours=24)
         clases_disponibles = []
+        ids_vistos = set()
         for c in registros:
+            clase_id = c.get('id')
+            if clase_id in ids_vistos:
+                continue
+            ids_vistos.add(clase_id)
             fecha_clase = c.get('fecha', '')
             hora_clase = c.get('hora', '')
             if not fecha_clase or not hora_clase:
@@ -510,7 +513,7 @@ def api_obtener_rm():
         return jsonify([])
 
 # ============================================
-# API CLIENTE - LOGIN Y PERFIL (CON RATE LIMITING)
+# API CLIENTE - LOGIN Y PERFIL
 # ============================================
 @app.route('/cliente/login', methods=['POST'])
 @limiter.limit("10 per minute")
@@ -518,17 +521,29 @@ def cliente_login_post():
     data = request.json
     email = data.get('email')
     
-    # Validar formato de email
     if not validar_email(email):
         return jsonify({"error": "Email no válido"}), 400
     
     try:
         sheet = get_sheet("clientes")
         registros = sheet.get_all_records()
+        from datetime import date
+        
         for registro in registros:
             if registro.get('email') == email:
                 if registro.get('activo') != 'TRUE':
                     return jsonify({"error": "Usuario inactivo"}), 401
+                
+                # Validar membresía vencida
+                fecha_vencimiento = registro.get('fecha_vencimiento', '')
+                if fecha_vencimiento:
+                    try:
+                        fecha_venc = datetime.strptime(fecha_vencimiento, "%Y-%m-%d").date()
+                        if fecha_venc < date.today():
+                            return jsonify({"error": "Tu membresía ha vencido. Contacta al administrador."}), 401
+                    except:
+                        pass
+                
                 return jsonify({
                     "mensaje": f"Bienvenido {registro.get('nombre')}",
                     "email": email,
@@ -537,6 +552,7 @@ def cliente_login_post():
         return jsonify({"error": "Email no registrado"}), 401
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+    
 
 @app.route('/cliente/perfil', methods=['POST'])
 def cliente_obtener_perfil():
@@ -584,7 +600,7 @@ def cliente_obtener_anuncios():
         return jsonify({"error": str(e)}), 500
 
 # ============================================
-# API CLIENTE - RM (POST, PUT, DELETE)
+# API CLIENTE - RM (CRUD)
 # ============================================
 @app.route('/cliente/rm', methods=['POST'])
 def cliente_agregar_rm():
@@ -690,7 +706,7 @@ def cliente_eliminar_rm():
         return jsonify({"error": str(e)}), 500
 
 # ============================================
-# API CLIENTE - VER RM DE OTRO CLIENTE (público)
+# API CLIENTE - VER RM DE OTRO CLIENTE
 # ============================================
 @app.route('/cliente/rm/publico', methods=['GET'])
 def cliente_ver_rm_publico():
@@ -732,7 +748,7 @@ def cliente_ver_rm_publico():
         return jsonify({"error": str(e)}), 500
 
 # ============================================
-# API CLIENTE - OBTENER OTROS CLIENTES EN LA MISMA CLASE
+# API CLIENTE - OTROS CLIENTES EN LA MISMA CLASE
 # ============================================
 @app.route('/cliente/otros-reservas', methods=['POST'])
 def cliente_otros_reservas():
@@ -911,9 +927,19 @@ def cliente_reservar():
         if disponibles <= 0:
             return jsonify({"error": "No hay cupos"}), 400
         
-        fecha_clase_reservar = clase.get('fecha', '')
         sheet_reservas = get_sheet("reservas")
         reservas = sheet_reservas.get_all_records()
+        
+        # Validar que no tenga otra reserva activa
+        reservas_activas = 0
+        for r in reservas:
+            if r.get('cliente_id') == cliente_id and r.get('estado') == 'confirmada':
+                reservas_activas += 1
+        
+        if reservas_activas >= 1:
+            return jsonify({"error": "Ya tienes una reserva activa. Cancélala primero para reservar otra."}), 400
+        
+        fecha_clase_reservar = clase.get('fecha', '')
         
         for r in reservas:
             if r.get('cliente_id') == cliente_id and r.get('estado') == 'confirmada':
