@@ -772,7 +772,11 @@ function abrirModalCliente() {
 
 function editarCliente(id) {
     const cliente = todosLosClientes.find(c => c.id == id);
-    if (!cliente) return;
+    if (!cliente) {
+        mostrarMensaje("Cliente no encontrado", 'error');
+        return;
+    }
+    
     document.getElementById('modalTitulo').innerHTML = '<i class="fas fa-user-edit"></i> Editar Cliente';
     document.getElementById('clienteId').value = cliente.id;
     document.getElementById('nombre').value = cliente.nombre || '';
@@ -831,15 +835,13 @@ async function guardarCliente() {
 }
 
 async function eliminarCliente(id) {
-    if (confirm('¿Eliminar este cliente?')) {
-        const res = await fetch(`/admin/clientes/${id}`, { method: 'DELETE' });
-        const data = await res.json();
-        if (res.ok) {
-            mostrarMensaje(data.mensaje, 'success');
-            cargarClientes();
-        } else {
-            mostrarMensaje(data.error || 'Error al eliminar', 'error');
-        }
+    const res = await fetch(`/admin/clientes/${id}`, { method: 'DELETE' });
+    const data = await res.json();
+    if (res.ok) {
+        mostrarMensaje(data.mensaje, 'success');
+        cargarClientes();
+    } else {
+        mostrarMensaje(data.error || 'Error al eliminar', 'error');
     }
 }
 
@@ -957,12 +959,6 @@ async function crearClasesMultiples() {
         return;
     }
     
-    // Confirmación sin URL de onrender
-    const confirmacion = confirm(`¿Crear ${fechas.length} clase(s) para la próxima semana?`);
-    if (!confirmacion) {
-        return;
-    }
-    
     let creadas = 0;
     let errores = 0;
     
@@ -1046,15 +1042,13 @@ function toggleClase(id) {
 }
 
 async function eliminarClase(id) {
-    if (confirm('¿Eliminar esta clase?')) {
-        const res = await fetch(`/admin/clases/${id}`, { method: 'DELETE' });
-        const data = await res.json();
-        if (res.ok) {
-            mostrarMensaje(data.mensaje, 'success');
-            cargarClases();
-        } else {
-            mostrarMensaje(data.error || 'Error al eliminar', 'error');
-        }
+    const res = await fetch(`/admin/clases/${id}`, { method: 'DELETE' });
+    const data = await res.json();
+    if (res.ok) {
+        mostrarMensaje(data.mensaje, 'success');
+        cargarClases();
+    } else {
+        mostrarMensaje(data.error || 'Error al eliminar', 'error');
     }
 }
 
@@ -1137,14 +1131,12 @@ async function toggleAnuncio(id, vigenteActual) {
 }
 
 async function eliminarAnuncio(id) {
-    if (confirm('¿Eliminar este anuncio?')) {
-        const res = await fetch(`/admin/anuncios/${id}`, { method: 'DELETE' });
-        if (res.ok) {
-            mostrarMensaje('Anuncio eliminado', 'success');
-            cargarAnuncios();
-        } else {
-            mostrarMensaje('Error al eliminar', 'error');
-        }
+    const res = await fetch(`/admin/anuncios/${id}`, { method: 'DELETE' });
+    if (res.ok) {
+        mostrarMensaje('Anuncio eliminado', 'success');
+        cargarAnuncios();
+    } else {
+        mostrarMensaje('Error al eliminar', 'error');
     }
 }
 
