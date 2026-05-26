@@ -809,7 +809,8 @@ async function guardarCliente() {
     let res;
     try {
         if (id) {
-            res = await fetch(`/admin/clientes/${id}`, {
+            // Asegurar que id es número
+            res = await fetch(`/admin/clientes/${parseInt(id)}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(datos)
@@ -830,6 +831,7 @@ async function guardarCliente() {
             mostrarMensaje(data.error || 'Error al guardar', 'error');
         }
     } catch (error) {
+        console.error('Error:', error);
         mostrarMensaje('Error de conexión', 'error');
     }
 }

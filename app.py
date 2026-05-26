@@ -191,48 +191,52 @@ def admin_crear_cliente():
 def admin_actualizar_cliente(cliente_id):
     try:
         data = request.json
-        print(f"📝 Editando cliente ID: {cliente_id}")
-        print(f"📦 Datos: {data}")
+        
+        # Validar que el email no esté vacío
+        email = data.get('email', '')
+        if not email:
+            return jsonify({"error": "El email es requerido"}), 400
         
         sheet = get_sheet("clientes")
         registros = sheet.get_all_records()
         
+        # Buscar la fila por ID (comparar como enteros)
         fila_index = None
         for i, registro in enumerate(registros, start=2):
-            if registro.get('id') == cliente_id:
+            if int(registro.get('id')) == cliente_id:
                 fila_index = i
                 break
         
         if not fila_index:
             return jsonify({"error": "Cliente no encontrado"}), 404
         
-        # Convertir todos los valores a string para evitar errores
-        sheet.update(fila_index, [
-            str(cliente_id),
-            str(data.get('nombre', '')),
-            str(data.get('email', '')),
-            str(data.get('celular', '')),
-            str(data.get('eps', '')),
-            str(data.get('foto_url', '')),
-            str(data.get('membresia_id', '')),
-            str(data.get('clases_restantes_mes', 0)),
-            str(data.get('fecha_vencimiento', '')),
-            str(data.get('activo', 'TRUE'))
-        ])
+        # Actualizar celda por celda
+        sheet.update_cell(fila_index, 1, str(cliente_id))
+        sheet.update_cell(fila_index, 2, str(data.get('nombre', '')))
+        sheet.update_cell(fila_index, 3, str(email))
+        sheet.update_cell(fila_index, 4, str(data.get('celular', '')))
+        sheet.update_cell(fila_index, 5, str(data.get('eps', '')))
+        sheet.update_cell(fila_index, 6, str(data.get('foto_url', '')))
+        sheet.update_cell(fila_index, 7, str(data.get('membresia_id', '')))
+        sheet.update_cell(fila_index, 8, str(data.get('clases_restantes_mes', 0)))
+        sheet.update_cell(fila_index, 9, str(data.get('fecha_vencimiento', '')))
+        sheet.update_cell(fila_index, 10, str(data.get('activo', 'TRUE')))
         
         return jsonify({"mensaje": "Cliente actualizado correctamente"})
     except Exception as e:
-        print(f"❌ Error: {e}")
+        print(f"Error: {e}")
         return jsonify({"error": str(e)}), 500
     
+
 
 @app.route('/admin/clientes/<int:cliente_id>', methods=['DELETE'])
 def admin_eliminar_cliente(cliente_id):
     try:
         sheet = get_sheet("clientes")
         registros = sheet.get_all_records()
+        
         for i, r in enumerate(registros, start=2):
-            if r.get('id') == cliente_id:
+            if int(r.get('id')) == cliente_id:
                 sheet.delete_rows(i)
                 return jsonify({"mensaje": "Cliente eliminado"})
         return jsonify({"error": "No encontrado"}), 404
