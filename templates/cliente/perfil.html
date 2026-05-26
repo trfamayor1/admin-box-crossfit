@@ -23,7 +23,7 @@
             height: 120px;
             border-radius: 50%;
             object-fit: cover;
-            margin: 0 auto;
+            margin: 10px auto;
             background: var(--bg-surface);
             border: 3px solid var(--primary);
         }
@@ -87,6 +87,16 @@
             background: rgba(255, 255, 255, 0.03);
             border-radius: 8px;
         }
+        .btn-subir-foto {
+            background: var(--primary);
+            color: var(--bg-primary);
+            border: none;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 10px;
+        }
     </style>
 </head>
 <body>
@@ -105,8 +115,14 @@
 
     <!-- Tarjeta de perfil -->
     <div class="card">
+        <!-- Sección para subir foto -->
         <div class="foto-container">
-            <img id="fotoPerfil" class="foto-perfil" src="" alt="">
+            <img id="fotoPerfil" class="foto-perfil" src="" alt="Foto de perfil">
+            <div>
+                <input type="file" id="fotoInput" accept="image/*" style="margin: 10px 0;">
+                <button onclick="subirFoto()" class="btn-subir-foto"><i class="fas fa-upload"></i> Subir foto</button>
+            </div>
+            <p id="fotoMsg" style="font-size: 12px; margin-top: 5px;"></p>
         </div>
 
         <div id="info" class="info">Cargando...</div>
@@ -159,6 +175,50 @@ function generarAvatar(nombre, email) {
     const hue = Math.abs(hash % 360);
     
     return `https://ui-avatars.com/api/?name=${iniciales}&background=hsl(${hue},70%,55%)&color=fff&size=120&bold=true&length=2&fontsize=0.5`;
+}
+
+// ============================================
+// SUBIR FOTO DE PERFIL
+// ============================================
+async function subirFoto() {
+    const input = document.getElementById('fotoInput');
+    const msg = document.getElementById('fotoMsg');
+    const foto = input.files[0];
+    
+    if (!foto) {
+        msg.innerHTML = "❌ Selecciona una foto primero";
+        msg.style.color = "#ff6666";
+        return;
+    }
+    
+    msg.innerHTML = "⏳ Subiendo...";
+    msg.style.color = "#ffaa00";
+    
+    const formData = new FormData();
+    formData.append('email', clienteEmail);
+    formData.append('foto', foto);
+    
+    try {
+        const response = await fetch('/cliente/subir-foto', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            msg.innerHTML = "✅ " + data.mensaje;
+            msg.style.color = "#66ff66";
+            document.getElementById('fotoPerfil').src = data.url + "?t=" + Date.now();
+        } else {
+            msg.innerHTML = "❌ " + data.error;
+            msg.style.color = "#ff6666";
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        msg.innerHTML = "❌ Error de conexión";
+        msg.style.color = "#ff6666";
+    }
 }
 
 // ============================================
@@ -215,8 +275,13 @@ async function cargarPerfil() {
                 </div>
             `;
             
-            const avatarUrl = generarAvatar(data.nombre, data.email);
-            document.getElementById('fotoPerfil').src = avatarUrl;
+            // Mostrar foto de perfil si existe, si no mostrar avatar
+            if (data.foto_url) {
+                document.getElementById('fotoPerfil').src = data.foto_url;
+            } else {
+                const avatarUrl = generarAvatar(data.nombre, data.email);
+                document.getElementById('fotoPerfil').src = avatarUrl;
+            }
             
             errorMsg.innerHTML = '';
         } else {

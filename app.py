@@ -9,6 +9,7 @@ import os
 import tempfile
 import re
 from datetime import datetime, date, timedelta
+import requests
 
 app = Flask(__name__)
 CORS(app)
@@ -32,6 +33,23 @@ def safe_str(value):
 def validar_email(email):
     patron = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
     return re.match(patron, email) is not None
+
+def subir_a_imgbb(archivo_temporal):
+    try:
+        api_key = "6d207e02198a847aa98d0a2a901485a5"
+        with open(archivo_temporal, 'rb') as f:
+            files = {'image': f}
+            data = {'key': api_key}
+            response = requests.post('https://api.imgbb.com/1/upload', data=data, files=files)
+        if response.status_code == 200:
+            result = response.json()
+            if result.get('status') == 200:
+                return result['data']['url']
+        return None
+    except Exception as e:
+        print(f"Error: {e}")
+        return None
+
 
 # ============================================
 # ANTI-CACHÉ
@@ -1086,6 +1104,42 @@ def serve_manifest_admin():
 @app.route('/sw-admin.js')
 def serve_sw_admin():
     return send_from_directory('.', 'sw-admin.js')
+
+
+@app.route('/cliente/subir-foto', methods=['POST'])
+def cliente_subir_foto():
+    email = request.form.get('email')
+    foto = request.files.get('foto')
+    
+    if not email or not foto:
+        return jsonify({"error": "Email y foto son requeridos"}), 400
+    
+    if not foto.content_type.startswith('image/'):
+        return jsonify({"error": "Solo se permiten imágenes"}), 400
+    
+    with tempfile.NamedTemporaryFile(delete=False, suffix='.jpg') as tmp:
+        foto.save(tmp.name)
+        tmp_path = tmp.name
+    
+    url_publica = subir_a_imgbb(tmp_path)
+    os.unlink(tmp_path)
+    
+    if not url_publica:
+        return jsonify({"error": "Error al subir la foto"}), 500
+    
+    try:
+        sheet = get_sheet("clientes")
+        clientes = sheet.get_all_records()
+        fila_cliente = None
+        for i, c in enumerate(clientes, start=2):
+            if c.get('email') == email:
+                fila_cliente = i
+                break
+        if fila_cliente:
+            sheet.update_cell(fila_cliente, 6, url_publica)
+        return jsonify({"mensaje": "Foto actualizada", "url": url_publica})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 # ============================================
 # INICIAR SERVIDOR
