@@ -114,7 +114,7 @@
         /* Detalle del cliente en DOS COLUMNAS */
         .cliente-detalle {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            grid-template-columns: 1fr 1fr;
             gap: 12px;
             margin-bottom: 20px;
         }
@@ -416,7 +416,7 @@
             .cliente-info, .clase-info {
                 flex: 1;
             }
-            .cliente-detalle, .clase-detalle {
+            .cliente-detalle {
                 grid-template-columns: 1fr;
             }
             .cliente-header, .clase-header {
@@ -566,6 +566,7 @@
         <input type="email" id="email" placeholder="Email">
         <input type="text" id="celular" placeholder="Celular">
         <input type="text" id="eps" placeholder="EPS">
+        <input type="number" id="clasesRestantes" placeholder="Clases restantes" step="1" min="0">
         <select id="membresiaId"></select>
         <input type="date" id="fechaVencimiento">
         <select id="activo">
@@ -690,27 +691,27 @@ function mostrarClientesFiltrados() {
                 <div class="cliente-body" id="body-${cliente.id}">
                     <div class="cliente-detalle">
                         <div class="detalle-item">
-                            <span class="detalle-label"><i class="fas fa-id-card"></i> ID</span>
+                            <span class="detalle-label">ID</span>
                             <span class="detalle-valor">${cliente.id}</span>
                         </div>
                         <div class="detalle-item">
-                            <span class="detalle-label"><i class="fas fa-phone"></i> Celular</span>
+                            <span class="detalle-label">Celular</span>
                             <span class="detalle-valor">${cliente.celular || 'No registrado'}</span>
                         </div>
                         <div class="detalle-item">
-                            <span class="detalle-label"><i class="fas fa-hospital-user"></i> EPS</span>
+                            <span class="detalle-label">EPS</span>
                             <span class="detalle-valor">${cliente.eps || 'No registrado'}</span>
                         </div>
                         <div class="detalle-item">
-                            <span class="detalle-label"><i class="fas fa-tag"></i> Membresía</span>
+                            <span class="detalle-label">Membresía</span>
                             <span class="detalle-valor">${membresia ? membresia.nombre : 'Sin membresía'}</span>
                         </div>
                         <div class="detalle-item">
-                            <span class="detalle-label"><i class="fas fa-calendar-check"></i> Clases Rest.</span>
+                            <span class="detalle-label">Clases Rest.</span>
                             <span class="detalle-valor" style="color: ${(cliente.clases_restantes_mes || 0) > 0 ? '#10b981' : '#dc2626'}">${cliente.clases_restantes_mes || 0}</span>
                         </div>
                         <div class="detalle-item">
-                            <span class="detalle-label"><i class="fas fa-calendar-alt"></i> Vencimiento</span>
+                            <span class="detalle-label">Vencimiento</span>
                             <span class="detalle-valor">${cliente.fecha_vencimiento || 'No registrado'}</span>
                         </div>
                     </div>
@@ -766,6 +767,8 @@ function abrirModalCliente() {
     document.getElementById('email').value = '';
     document.getElementById('celular').value = '';
     document.getElementById('eps').value = '';
+    document.getElementById('clasesRestantes').value = 0;
+    document.getElementById('membresiaId').value = '';
     document.getElementById('fechaVencimiento').value = '';
     document.getElementById('activo').value = 'TRUE';
     document.getElementById('modalCliente').style.display = 'flex';
@@ -784,6 +787,7 @@ function editarCliente(id) {
     document.getElementById('email').value = cliente.email || '';
     document.getElementById('celular').value = cliente.celular || '';
     document.getElementById('eps').value = cliente.eps || '';
+    document.getElementById('clasesRestantes').value = cliente.clases_restantes_mes || 0;
     document.getElementById('membresiaId').value = cliente.membresia_id || '';
     document.getElementById('fechaVencimiento').value = cliente.fecha_vencimiento || '';
     document.getElementById('activo').value = cliente.activo || 'TRUE';
@@ -801,6 +805,7 @@ async function guardarCliente() {
         email: document.getElementById('email').value,
         celular: document.getElementById('celular').value,
         eps: document.getElementById('eps').value,
+        clases_restantes_mes: parseInt(document.getElementById('clasesRestantes').value) || 0,
         membresia_id: document.getElementById('membresiaId').value,
         fecha_vencimiento: document.getElementById('fechaVencimiento').value,
         activo: document.getElementById('activo').value,
@@ -991,9 +996,6 @@ async function crearClasesMultiples() {
     }
 }
 
-// ============================================
-// CLASES PROGRAMADAS - ACORDEÓN
-// ============================================
 async function cargarClases() {
     const container = document.getElementById('clasesContainer');
     container.innerHTML = '<div class="loading-spinner"><i class="fas fa-spinner fa-pulse"></i><p>Cargando clases...</p></div>';
