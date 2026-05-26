@@ -191,6 +191,9 @@ def admin_crear_cliente():
 def admin_actualizar_cliente(cliente_id):
     try:
         data = request.json
+        print(f"📝 Editando cliente ID: {cliente_id}")
+        print(f"📦 Datos: {data}")
+        
         sheet = get_sheet("clientes")
         registros = sheet.get_all_records()
         
@@ -203,33 +206,25 @@ def admin_actualizar_cliente(cliente_id):
         if not fila_index:
             return jsonify({"error": "Cliente no encontrado"}), 404
         
-        nueva_membresia_id = data.get('membresia_id', '')
-        clases_restantes = 0
-        try:
-            sheet_memb = get_sheet("membresias")
-            membresias = sheet_memb.get_all_records()
-            for m in membresias:
-                if str(m.get('id')) == str(nueva_membresia_id):
-                    clases_restantes = int(m.get('clases_por_mes', 0))
-                    break
-        except Exception as e:
-            print(f"Error: {e}")
-        
+        # Convertir todos los valores a string para evitar errores
         sheet.update(fila_index, [
-            cliente_id,
-            data.get('nombre', ''),
-            data.get('email', ''),
-            data.get('celular', ''),
-            data.get('eps', ''),
-            data.get('foto_url', ''),
-            nueva_membresia_id,
-            clases_restantes,
-            data.get('fecha_vencimiento', ''),
-            data.get('activo', 'TRUE')
+            str(cliente_id),
+            str(data.get('nombre', '')),
+            str(data.get('email', '')),
+            str(data.get('celular', '')),
+            str(data.get('eps', '')),
+            str(data.get('foto_url', '')),
+            str(data.get('membresia_id', '')),
+            str(data.get('clases_restantes_mes', 0)),
+            str(data.get('fecha_vencimiento', '')),
+            str(data.get('activo', 'TRUE'))
         ])
-        return jsonify({"mensaje": "Cliente actualizado"})
+        
+        return jsonify({"mensaje": "Cliente actualizado correctamente"})
     except Exception as e:
+        print(f"❌ Error: {e}")
         return jsonify({"error": str(e)}), 500
+    
 
 @app.route('/admin/clientes/<int:cliente_id>', methods=['DELETE'])
 def admin_eliminar_cliente(cliente_id):
