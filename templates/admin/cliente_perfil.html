@@ -29,17 +29,13 @@
             flex-wrap: wrap;
         }
         
-        .perfil-avatar {
-            width: 80px;
-            height: 80px;
+        .perfil-foto {
+            width: 100px;
+            height: 100px;
             border-radius: 50%;
-            background: var(--primary);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            color: var(--bg-primary);
-            font-size: 32px;
+            object-fit: cover;
+            background: var(--bg-surface);
+            border: 3px solid var(--primary);
         }
         
         .perfil-titulo {
@@ -48,6 +44,7 @@
         
         .perfil-titulo h1 {
             margin-bottom: 5px;
+            font-size: 1.8rem;
         }
         
         .seccion-perfil {
@@ -144,6 +141,21 @@
             box-shadow: var(--shadow-glow);
         }
         
+        .cliente-estado {
+            display: inline-block;
+            font-size: 12px;
+            padding: 4px 12px;
+            border-radius: 20px;
+            background: rgba(16, 185, 129, 0.2);
+            color: #10b981;
+            margin-top: 5px;
+        }
+        
+        .cliente-estado.inactivo {
+            background: rgba(220, 38, 38, 0.2);
+            color: #dc2626;
+        }
+        
         .empty-state {
             text-align: center;
             padding: 40px;
@@ -233,7 +245,7 @@ async function cargarPerfil() {
         const rmRes = await fetch(`/admin/rm/${encodeURIComponent(clienteEmail)}`);
         const rmRecords = await rmRes.json();
         
-        // Obtener iniciales para el avatar
+        // Obtener iniciales para el avatar (solo si no hay foto)
         const nombreCompleto = perfilData.nombre || 'Cliente';
         const iniciales = nombreCompleto.split(' ').map(p => p[0]).join('').toUpperCase().substring(0, 2);
         const estadoClass = perfilData.activo == 'TRUE' ? 'activo' : 'inactivo';
@@ -246,6 +258,14 @@ async function cargarPerfil() {
             hash = hash & hash;
         }
         const hue = Math.abs(hash % 360);
+        
+        // Foto de perfil
+        let fotoHtml = '';
+        if (perfilData.foto_url) {
+            fotoHtml = `<img src="${perfilData.foto_url}" class="perfil-foto" alt="Foto de perfil">`;
+        } else {
+            fotoHtml = `<div class="perfil-foto" style="background: hsl(${hue}, 70%, 55%); display: flex; align-items: center; justify-content: center; font-size: 40px; font-weight: bold; color: white;">${iniciales}</div>`;
+        }
         
         let rmHtml = '';
         if (rmRecords && rmRecords.length > 0) {
@@ -287,13 +307,11 @@ async function cargarPerfil() {
         
         container.innerHTML = `
             <div class="perfil-header">
-                <div class="perfil-avatar" style="background: hsl(${hue}, 70%, 55%);">
-                    ${iniciales}
-                </div>
+                ${fotoHtml}
                 <div class="perfil-titulo">
                     <h1><i class="fas fa-user"></i> ${perfilData.nombre || 'Sin nombre'}</h1>
                     <p style="color: var(--text-secondary);">${perfilData.email || 'Sin email'}</p>
-                    <span class="cliente-estado ${estadoClass}" style="display: inline-block; margin-top: 5px;">${estadoText}</span>
+                    <span class="cliente-estado ${estadoClass}">${estadoText}</span>
                 </div>
             </div>
             

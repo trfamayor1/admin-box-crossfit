@@ -97,6 +97,29 @@
             cursor: pointer;
             margin-top: 10px;
         }
+        .rm-otro-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .rm-otro-foto {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-right: 15px;
+        }
+        .rm-otro-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-right: 15px;
+        }
     </style>
 </head>
 <body>
@@ -210,6 +233,15 @@ async function subirFoto() {
             msg.innerHTML = "✅ " + data.mensaje;
             msg.style.color = "#66ff66";
             document.getElementById('fotoPerfil').src = data.url + "?t=" + Date.now();
+            // Actualizar también la foto en la búsqueda de otros clientes si está visible
+            const rmOtroDiv = document.getElementById('rmOtroCliente');
+            if (rmOtroDiv && rmOtroDiv.innerHTML.includes('d-none') === false) {
+                // Si hay una búsqueda activa, recargarla
+                const buscarEmail = document.getElementById('buscarEmail').value;
+                if (buscarEmail === clienteEmail) {
+                    buscarRMCliente();
+                }
+            }
         } else {
             msg.innerHTML = "❌ " + data.error;
             msg.style.color = "#ff6666";
@@ -326,7 +358,7 @@ async function cargarAnuncios() {
 }
 
 // ============================================
-// VER RM DE OTRO CLIENTE
+// VER RM DE OTRO CLIENTE (CON FOTO)
 // ============================================
 async function buscarRMCliente() {
     const email = document.getElementById('buscarEmail').value;
@@ -355,22 +387,32 @@ async function buscarRMCliente() {
         const rmRes = await fetch(`/cliente/rm/publico?email=${encodeURIComponent(email)}`);
         const rmRecords = await rmRes.json();
         
-        if (!rmRecords || rmRecords.length === 0) {
-            container.innerHTML = `<p>📭 ${perfilData.nombre || 'El cliente'} no tiene registros RM aún.</p>`;
-            return;
+        // Foto o avatar del cliente buscado
+        let fotoHtml = '';
+        if (perfilData.foto_url) {
+            fotoHtml = `<img src="${perfilData.foto_url}" class="rm-otro-foto" alt="Foto">`;
+        } else {
+            const iniciales = perfilData.nombre.split(' ').map(p => p[0]).join('').toUpperCase().substring(0, 2);
+            fotoHtml = `<div class="rm-otro-avatar">${iniciales}</div>`;
         }
         
         let html = `<div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 12px; margin-top: 10px;">
-            <div style="font-weight: bold; color: var(--primary); margin-bottom: 10px;">🏋️ RM de ${perfilData.nombre}</div>`;
-        
-        rmRecords.forEach(r => {
-            html += `
-                <div class="rm-item">
-                    <strong>${r.habilidad_nombre || 'Desconocido'}</strong>: ${r.peso_kg} kg
-                    <span style="font-size: 11px; color: var(--text-disabled);"> (${r.fecha_registro || ''})</span>
+            <div class="rm-otro-header">
+                ${fotoHtml}
+                <div>
+                    <div style="font-weight: bold; color: var(--primary); font-size: 18px;">🏋️ ${perfilData.nombre}</div>
+                    <div style="font-size: 12px; color: var(--text-disabled);">${perfilData.email}</div>
                 </div>
-            `;
-        });
+            </div>
+            <div style="font-weight: bold; margin-bottom: 10px;">Registros (RM):</div>`;
+        
+        if (rmRecords && rmRecords.length > 0) {
+            rmRecords.forEach(r => {
+                html += `<div class="rm-item"><strong>${r.habilidad_nombre || 'Desconocido'}</strong>: ${r.peso_kg} kg<span style="font-size: 11px; color: var(--text-disabled);"> (${r.fecha_registro || ''})</span></div>`;
+            });
+        } else {
+            html += `<p>📭 No tiene registros RM aún.</p>`;
+        }
         html += `</div>`;
         container.innerHTML = html;
         
