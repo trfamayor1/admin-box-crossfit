@@ -111,9 +111,10 @@
             display: block;
         }
         
+        /* Detalle del cliente en DOS COLUMNAS */
         .cliente-detalle {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));  /* ← DOS COLUMNAS */
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
             gap: 12px;
             margin-bottom: 20px;
         }
@@ -809,7 +810,6 @@ async function guardarCliente() {
     let res;
     try {
         if (id) {
-            // Asegurar que id es número
             res = await fetch(`/admin/clientes/${parseInt(id)}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
