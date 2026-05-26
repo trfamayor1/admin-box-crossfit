@@ -262,7 +262,7 @@ async function cargarPerfil() {
         // Foto de perfil
         let fotoHtml = '';
         if (perfilData.foto_url) {
-            fotoHtml = `<img src="${perfilData.foto_url}" class="perfil-foto" alt="Foto de perfil">`;
+            fotoHtml = `<img src="${perfilData.foto_url}" class="perfil-foto" alt="">`;
         } else {
             fotoHtml = `<div class="perfil-foto" style="background: hsl(${hue}, 70%, 55%); display: flex; align-items: center; justify-content: center; font-size: 40px; font-weight: bold; color: white;">${iniciales}</div>`;
         }
