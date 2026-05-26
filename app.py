@@ -348,6 +348,7 @@ def admin_crear_anuncio():
             nuevo_id,
             data.get('titulo', ''),
             data.get('texto', ''),
+            data.get('imagen_url', ''),  # 👈 NUEVO CAMPO
             fecha_actual,
             'TRUE'
         ])
@@ -592,7 +593,7 @@ def cliente_obtener_perfil():
                     "clases_restantes": registro.get('clases_restantes_mes', 0),
                     "fecha_vencimiento": registro.get('fecha_vencimiento', ''),
                     "activo": registro.get('activo', 'TRUE'),
-                    "foto_url": registro.get('foto_url', '')
+                    "foto_url": registro.get('foto_url', '')  # 👈 YA ESTÁ, VERIFICAR
                 })
         return jsonify({"error": "Perfil no encontrado"}), 404
     except Exception as e:
@@ -1140,6 +1141,30 @@ def cliente_subir_foto():
         return jsonify({"mensaje": "Foto actualizada", "url": url_publica})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+@app.route('/admin/subir-imagen-anuncio', methods=['POST'])
+def admin_subir_imagen_anuncio():
+    imagen = request.files.get('imagen')
+    
+    if not imagen:
+        return jsonify({"error": "No se recibió imagen"}), 400
+    
+    if not imagen.content_type.startswith('image/'):
+        return jsonify({"error": "Solo se permiten imágenes"}), 400
+    
+    with tempfile.NamedTemporaryFile(delete=False, suffix='.jpg') as tmp:
+        imagen.save(tmp.name)
+        tmp_path = tmp.name
+    
+    url_publica = subir_a_imgbb(tmp_path)
+    os.unlink(tmp_path)
+    
+    if not url_publica:
+        return jsonify({"error": "Error al subir la imagen"}), 500
+    
+    return jsonify({"url": url_publica})
+
 
 # ============================================
 # INICIAR SERVIDOR

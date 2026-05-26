@@ -535,14 +535,16 @@
     <div class="seccion">
         <h3><i class="fas fa-bullhorn" style="color: var(--primary);"></i> Anuncios</h3>
         <div class="input-group">
-            <input type="text" id="anuncioTitulo" placeholder="Título">
-            <input type="text" id="anuncioTexto" placeholder="Texto del anuncio">
+            <input type="text" id="anuncioTitulo" placeholder="Título" style="flex:2;">
+            <input type="text" id="anuncioTexto" placeholder="Texto del anuncio" style="flex:3;">
+            <input type="file" id="anuncioImagen" accept="image/*" style="padding: 5px;">
             <button onclick="crearAnuncio()" class="btn-agregar"><i class="fas fa-plus"></i> Crear Anuncio</button>
         </div>
         <div style="margin-top:20px; overflow-x:auto;">
             <table style="width:100%">
                 <thead>
                     <tr>
+                        <th>Imagen</th>
                         <th>Título</th>
                         <th>Texto</th>
                         <th>Fecha</th>
@@ -554,7 +556,6 @@
             </table>
         </div>
     </div>
-</div>
 
 <!-- Modal Cliente -->
 <div id="modalCliente" class="modal">
@@ -1068,8 +1069,10 @@ async function cargarAnuncios() {
     document.getElementById('totalAnuncios').innerText = anuncios.length;
     
     anuncios.forEach(a => {
+        const imagenHtml = a.imagen_url ? `<img src="${a.imagen_url}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 8px;">` : 'Sin imagen';
         tbody.innerHTML += `
             <tr>
+                <td data-label="Imagen">${imagenHtml}</td>
                 <td data-label="Título"><strong>${a.titulo || ''}</strong></td>
                 <td data-label="Texto">${a.texto || ''}</td>
                 <td data-label="Fecha">${a.fecha_publicacion || ''}</td>
@@ -1078,10 +1081,10 @@ async function cargarAnuncios() {
                         style="background: ${a.vigente == 'TRUE' ? '#10b981' : '#dc2626'}; padding:5px 10px; border-radius:20px;">
                         ${a.vigente == 'TRUE' ? '✅ Activo' : '❌ Inactivo'}
                     </button>
-                </td>
+                 </td>
                 <td data-label="Acciones">
                     <button class="btn-eliminar" onclick="eliminarAnuncio(${a.id})"><i class="fas fa-trash"></i></button>
-                </td>
+                 </td>
             </tr>
         `;
     });
@@ -1090,16 +1093,41 @@ async function cargarAnuncios() {
 async function crearAnuncio() {
     const titulo = document.getElementById('anuncioTitulo').value;
     const texto = document.getElementById('anuncioTexto').value;
+    const imagenFile = document.getElementById('anuncioImagen').files[0];
     
     if (!titulo || !texto) {
         mostrarMensaje("Completa título y texto", 'error');
         return;
     }
     
+    // Primero, si hay imagen, subirla a ImgBB
+    let imagenUrl = '';
+    if (imagenFile) {
+        const formData = new FormData();
+        formData.append('imagen', imagenFile);
+        
+        try {
+            const imgRes = await fetch('/admin/subir-imagen-anuncio', {
+                method: 'POST',
+                body: formData
+            });
+            const imgData = await imgRes.json();
+            if (imgRes.ok) {
+                imagenUrl = imgData.url;
+            } else {
+                mostrarMensaje("Error al subir la imagen", 'error');
+                return;
+            }
+        } catch (error) {
+            mostrarMensaje("Error al subir la imagen", 'error');
+            return;
+        }
+    }
+    
     const res = await fetch('/admin/anuncios', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ titulo, texto })
+        body: JSON.stringify({ titulo, texto, imagen_url: imagenUrl })
     });
     
     const data = await res.json();
@@ -1107,30 +1135,10 @@ async function crearAnuncio() {
         mostrarMensaje(data.mensaje, 'success');
         document.getElementById('anuncioTitulo').value = '';
         document.getElementById('anuncioTexto').value = '';
+        document.getElementById('anuncioImagen').value = '';
         cargarAnuncios();
     } else {
         mostrarMensaje(data.error, 'error');
-    }
-}
-
-async function toggleAnuncio(id, vigenteActual) {
-    const nuevaVigencia = vigenteActual == 'TRUE' ? 'FALSE' : 'TRUE';
-    
-    try {
-        const res = await fetch(`/admin/anuncios/${id}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ vigente: nuevaVigencia })
-        });
-        
-        if (res.ok) {
-            mostrarMensaje('Anuncio actualizado', 'success');
-            cargarAnuncios();
-        } else {
-            mostrarMensaje('Error al actualizar', 'error');
-        }
-    } catch (error) {
-        mostrarMensaje('Error de conexión', 'error');
     }
 }
 

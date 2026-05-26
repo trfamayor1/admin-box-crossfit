@@ -343,9 +343,11 @@ async function cargarAnuncios() {
         
         let html = '';
         for (const a of anuncios) {
+            const imagenHtml = a.imagen_url ? `<img src="${a.imagen_url}" style="width: 100%; max-height: 200px; object-fit: cover; border-radius: 12px; margin-bottom: 10px;">` : '';
             html += `
                 <div class="anuncio">
                     <div class="anuncio-titulo">📢 ${a.titulo || 'Sin título'}</div>
+                    ${imagenHtml}
                     <div>${a.texto || ''}</div>
                     <div class="anuncio-fecha">📅 ${a.fecha_publicacion || ''}</div>
                 </div>
@@ -356,7 +358,6 @@ async function cargarAnuncios() {
         container.innerHTML = '<p style="color:#dc2626;">Error al cargar anuncios</p>';
     }
 }
-
 // ============================================
 // VER RM DE OTRO CLIENTE (CON FOTO)
 // ============================================
