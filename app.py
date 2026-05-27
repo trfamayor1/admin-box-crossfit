@@ -948,17 +948,28 @@ def cliente_reservar():
         sheet_reservas = get_sheet("reservas")
         reservas = sheet_reservas.get_all_records()
         
-        # Validar que no tenga otra reserva activa
-        reservas_activas = 0
+        # ============================================
+        # VALIDAR RESERVA ACTIVA SOLO PARA CLASES FUTURAS
+        # ============================================
+        from datetime import date
+        hoy = date.today().isoformat()
+        reservas_activas_futuras = 0
         for r in reservas:
             if r.get('cliente_id') == cliente_id and r.get('estado') == 'confirmada':
-                reservas_activas += 1
+                # Obtener fecha de la clase reservada
+                for c in clases:
+                    if c.get('id') == r.get('clase_id'):
+                        fecha_clase = c.get('fecha', '')
+                        if fecha_clase and fecha_clase >= hoy:
+                            reservas_activas_futuras += 1
+                        break
         
-        if reservas_activas >= 1:
-            return jsonify({"error": "Ya tienes una reserva activa. Cancélala primero para reservar otra."}), 400
+        if reservas_activas_futuras >= 1:
+            return jsonify({"error": "Ya tienes una reserva activa para una clase futura. Cancélala primero para reservar otra."}), 400
         
         fecha_clase_reservar = clase.get('fecha', '')
         
+        # Validar que no tenga reserva el mismo día
         for r in reservas:
             if r.get('cliente_id') == cliente_id and r.get('estado') == 'confirmada':
                 sheet_clases_verificar = get_sheet("clases")
@@ -967,6 +978,7 @@ def cliente_reservar():
                     if c.get('id') == r.get('clase_id') and c.get('fecha') == fecha_clase_reservar:
                         return jsonify({"error": "Ya tienes reserva este día"}), 400
         
+        # Validar que no haya reservado esta misma clase
         for r in reservas:
             if r.get('cliente_id') == cliente_id and r.get('clase_id') == clase_id:
                 return jsonify({"error": "Ya reservaste esta clase"}), 400
@@ -987,7 +999,9 @@ def cliente_reservar():
             "mensaje": f"✅ Reserva confirmada. Te quedan {nuevas_restantes} clases."
         })
     except Exception as e:
+        print(f"Error en reservar: {e}")
         return jsonify({"error": str(e)}), 500
+    
 
 @app.route('/cliente/mis-reservas', methods=['POST'])
 def cliente_mis_reservas():
@@ -1009,6 +1023,7 @@ def cliente_mis_reservas():
         sheet_clases = get_sheet("clases")
         clases = sheet_clases.get_all_records()
         
+        from datetime import date
         hoy = date.today().isoformat()
         
         resultado = []
@@ -1017,6 +1032,7 @@ def cliente_mis_reservas():
                 for c in clases:
                     if c.get('id') == r.get('clase_id'):
                         fecha_clase = c.get('fecha', '')
+                        # Solo mostrar reservas futuras (fecha >= hoy)
                         if fecha_clase and fecha_clase >= hoy:
                             resultado.append({
                                 "reserva_id": r.get('id'),
@@ -1029,6 +1045,7 @@ def cliente_mis_reservas():
     except Exception as e:
         print(f"Error en mis-reservas: {e}")
         return jsonify([])
+    
 
 @app.route('/cliente/cancelar-reserva', methods=['POST'])
 @limiter.limit("10 per minute")
