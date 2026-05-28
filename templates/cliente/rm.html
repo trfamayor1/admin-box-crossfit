@@ -136,7 +136,6 @@
             margin-bottom: 16px;
         }
         
-        /* Modal */
         .modal-content select, .modal-content input {
             width: 100%;
             padding: 12px;
@@ -150,6 +149,10 @@
         .loading {
             text-align: center;
             padding: 40px;
+        }
+        
+        nav a i {
+            margin-right: 8px;
         }
         
         @media (max-width: 768px) {
@@ -173,7 +176,7 @@
 
     <nav>
         <a href="/cliente/perfil"><i class="fas fa-user"></i> Mi Perfil</a>
-        <a href="/cliente/clases"><i class="fas fa-calendar-alt"></i> Clases</a>
+        <a href="/cliente/clases"><i class="fas fa-calendar-alt"></i> RESERVAR</a>
         <a href="/cliente/mis-reservas"><i class="fas fa-bookmark"></i> Mis Reservas</a>
         <a href="/cliente/rm"><i class="fas fa-chart-simple"></i> Mis RM</a>
     </nav>
@@ -212,16 +215,10 @@ if (!clienteEmail) {
 let habilidades = [];
 let rmRecords = [];
 
-// ============================================
-// CARGAR HABILIDADES PRIMERO
-// ============================================
 async function cargarHabilidades() {
     try {
         const res = await fetch('/api/habilidades');
         habilidades = await res.json();
-        console.log('✅ Habilidades cargadas:', habilidades.length);
-        
-        // Llenar el select del modal
         const select = document.getElementById('habilidadId');
         select.innerHTML = '';
         habilidades.forEach(h => {
@@ -232,14 +229,10 @@ async function cargarHabilidades() {
     }
 }
 
-// ============================================
-// CARGAR RM
-// ============================================
 async function cargarRM() {
     try {
         const res = await fetch(`/api/rm?email=${encodeURIComponent(clienteEmail)}`);
         rmRecords = await res.json();
-        console.log('✅ RM cargados:', rmRecords.length);
         mostrarRM();
     } catch (error) {
         console.error('Error cargando RM:', error);
@@ -252,9 +245,6 @@ async function cargarRM() {
     }
 }
 
-// ============================================
-// MOSTRAR RM
-// ============================================
 function mostrarRM() {
     const container = document.getElementById('rmContainer');
     const busqueda = document.getElementById('buscador').value.toLowerCase();
@@ -299,9 +289,6 @@ function mostrarRM() {
     });
 }
 
-// ============================================
-// INICIALIZAR (habilidades primero, luego RM)
-// ============================================
 async function inicializar() {
     document.getElementById('rmContainer').innerHTML = `
         <div class="loading">
@@ -309,17 +296,10 @@ async function inicializar() {
             <p>Cargando...</p>
         </div>
     `;
-    
-    // Primero cargar habilidades
     await cargarHabilidades();
-    
-    // Luego cargar RM
     await cargarRM();
 }
 
-// ============================================
-// ABRIR MODAL NUEVO RM
-// ============================================
 function abrirModalRM() {
     document.getElementById('modalTituloRM').innerHTML = '<i class="fas fa-plus" style="color: var(--primary);"></i> Nuevo RM';
     document.getElementById('rmId').value = '';
@@ -327,9 +307,6 @@ function abrirModalRM() {
     document.getElementById('modalRM').style.display = 'flex';
 }
 
-// ============================================
-// EDITAR RM
-// ============================================
 function editarRM(id) {
     const rm = rmRecords.find(r => r.id == id);
     if (!rm) return;
@@ -340,16 +317,10 @@ function editarRM(id) {
     document.getElementById('modalRM').style.display = 'flex';
 }
 
-// ============================================
-// CERRAR MODAL
-// ============================================
 function cerrarModalRM() {
     document.getElementById('modalRM').style.display = 'none';
 }
 
-// ============================================
-// GUARDAR RM (CREAR o EDITAR)
-// ============================================
 async function guardarRM() {
     const id = document.getElementById('rmId').value;
     const datos = {
@@ -389,7 +360,7 @@ async function guardarRM() {
         if (res.ok) {
             mostrarMensaje(data.mensaje, 'exito');
             cerrarModalRM();
-            await cargarRM(); // Recargar RM (habilidades ya están cargadas)
+            await cargarRM();
         } else {
             mostrarMensaje(data.error, 'error');
         }
@@ -399,9 +370,6 @@ async function guardarRM() {
     }
 }
 
-// ============================================
-// ELIMINAR RM
-// ============================================
 async function eliminarRM(id) {
     if (!confirm('¿Eliminar este registro?')) return;
     
@@ -425,9 +393,6 @@ async function eliminarRM(id) {
     }
 }
 
-// ============================================
-// MOSTRAR MENSAJE
-// ============================================
 function mostrarMensaje(mensaje, tipo) {
     const msg = document.getElementById('msg');
     msg.innerHTML = tipo === 'exito' ? `<i class="fas fa-check-circle"></i> ${mensaje}` : `<i class="fas fa-exclamation-circle"></i> ${mensaje}`;
@@ -435,24 +400,15 @@ function mostrarMensaje(mensaje, tipo) {
     setTimeout(() => { msg.innerHTML = ''; }, 3000);
 }
 
-// ============================================
-// BUSCADOR
-// ============================================
 document.getElementById('buscador').addEventListener('input', () => {
     mostrarRM();
 });
 
-// ============================================
-// CERRAR SESIÓN
-// ============================================
 function cerrarSesion() {
     localStorage.removeItem('cliente_email');
     window.location.href = '/cliente/login';
 }
 
-// ============================================
-// INICIALIZAR TODO
-// ============================================
 inicializar();
 </script>
 </body>

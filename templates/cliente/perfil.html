@@ -138,7 +138,7 @@
 
     <nav>
         <a href="/cliente/perfil"><i class="fas fa-user"></i> Mi Perfil</a>
-        <a href="/cliente/clases"><i class="fas fa-calendar-alt"></i> Clases</a>
+        <a href="/cliente/clases"><i class="fas fa-calendar-alt"></i> RESERVAR</a>
         <a href="/cliente/mis-reservas"><i class="fas fa-bookmark"></i> Mis Reservas</a>
         <a href="/cliente/rm"><i class="fas fa-chart-simple"></i> Mis RM</a>
     </nav>
@@ -240,10 +240,8 @@ async function subirFoto() {
             msg.innerHTML = "✅ " + data.mensaje;
             msg.style.color = "#66ff66";
             document.getElementById('fotoPerfil').src = data.url + "?t=" + Date.now();
-            // Actualizar también la foto en la búsqueda de otros clientes si está visible
             const rmOtroDiv = document.getElementById('rmOtroCliente');
             if (rmOtroDiv && rmOtroDiv.innerHTML.includes('d-none') === false) {
-                // Si hay una búsqueda activa, recargarla
                 const buscarEmail = document.getElementById('buscarEmail').value;
                 if (buscarEmail === clienteEmail) {
                     buscarRMCliente();
@@ -314,7 +312,6 @@ async function cargarPerfil() {
                 </div>
             `;
             
-            // Mostrar foto de perfil si existe, si no mostrar avatar
             if (data.foto_url) {
                 document.getElementById('fotoPerfil').src = data.foto_url;
             } else {
@@ -335,7 +332,7 @@ async function cargarPerfil() {
 }
 
 // ============================================
-// CARGAR ANUNCIOS CON IMÁGENES
+// CARGAR ANUNCIOS
 // ============================================
 async function cargarAnuncios() {
     const container = document.getElementById('anunciosContainer');
@@ -367,7 +364,7 @@ async function cargarAnuncios() {
 }
 
 // ============================================
-// VER RM DE OTRO CLIENTE (CON FOTO)
+// VER RM DE OTRO CLIENTE
 // ============================================
 async function buscarRMCliente() {
     const email = document.getElementById('buscarEmail').value;
@@ -396,7 +393,6 @@ async function buscarRMCliente() {
         const rmRes = await fetch(`/cliente/rm/publico?email=${encodeURIComponent(email)}`);
         const rmRecords = await rmRes.json();
         
-        // Foto o avatar del cliente buscado
         let fotoHtml = '';
         if (perfilData.foto_url) {
             fotoHtml = `<img src="${perfilData.foto_url}" class="rm-otro-foto" alt="Foto">`;
