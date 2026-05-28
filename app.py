@@ -72,7 +72,7 @@ def subir_a_imgbb(archivo_temporal):
     except Exception as e:
         print(f"Error subiendo a ImgBB: {e}")
         return None
-
+    
 # ============================================
 # ANTI-CACHÉ
 # ============================================
@@ -959,7 +959,7 @@ def cliente_subir_foto():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
     
-    
+
 # ============================================
 # API CLIENTE - RESERVAS
 # ============================================
