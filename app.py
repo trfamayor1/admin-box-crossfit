@@ -529,7 +529,7 @@ def api_obtener_clases():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
     
-    
+
     
 
 # ============================================
@@ -1212,6 +1212,18 @@ def serve_manifest_admin():
 def serve_sw_admin():
     return send_from_directory('.', 'sw-admin.js')
 
+
+@app.route('/test-clases', methods=['GET'])
+def test_clases():
+    try:
+        sheet = get_sheet("clases")
+        registros = sheet.get_all_records()
+        return jsonify({
+            "total": len(registros),
+            "registros": registros
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 # ============================================
 # INICIAR SERVIDOR
 # ============================================
