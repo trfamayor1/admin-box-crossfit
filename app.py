@@ -500,10 +500,12 @@ def api_obtener_clases():
         sheet = get_sheet("clases")
         registros = sheet.get_all_records()
         
-        # Fechas: hoy y mañana
         from datetime import date, timedelta
         hoy = date.today()
         manana = hoy + timedelta(days=1)
+        
+        print(f"📅 Fecha actual en servidor: {hoy}")
+        print(f"📅 Mañana: {manana}")
         
         clases_disponibles = []
         ids_vistos = set()
@@ -515,25 +517,34 @@ def api_obtener_clases():
             ids_vistos.add(clase_id)
             
             fecha_clase = c.get('fecha', '')
+            print(f"🔍 Clase ID {clase_id}: fecha={fecha_clase}")
+            
             if not fecha_clase:
                 continue
             
             try:
                 fecha_obj = datetime.strptime(fecha_clase, "%Y-%m-%d").date()
-                # Solo mostrar clases de hoy o mañana
+                print(f"   📅 fecha_obj={fecha_obj}, es hoy? {fecha_obj == hoy}, es mañana? {fecha_obj == manana}")
+                
                 if fecha_obj == hoy or fecha_obj == manana:
                     disponibles = int(c.get('cupos_maximos', 0)) - int(c.get('cupos_ocupados', 0))
                     if disponibles > 0:
                         clases_disponibles.append(c)
-            except:
-                continue
+                        print(f"   ✅ AGREGADA")
+                    else:
+                        print(f"   ❌ Sin cupos")
+                else:
+                    print(f"   ❌ Fuera de rango")
+            except Exception as e:
+                print(f"   ❌ Error: {e}")
         
+        print(f"📤 Devolviendo {len(clases_disponibles)} clases")
         return jsonify(clases_disponibles)
     except Exception as e:
-        print(f"Error en api/clases: {e}")
+        print(f"❌ Error general: {e}")
         return jsonify({"error": str(e)}), 500
     
-    
+
 # ============================================
 # API PÚBLICA HABILIDADES
 # ============================================
