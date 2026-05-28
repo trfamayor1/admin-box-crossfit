@@ -59,7 +59,7 @@ def validar_email(email):
 # ============================================
 def subir_a_imgbb(archivo_temporal):
     try:
-        api_key = "8c339c9bb2209907600d7ef14ae56c12"
+        api_key = "6d207e02198a847aa98d0a2a901485a5"
         with open(archivo_temporal, 'rb') as f:
             files = {'image': f}
             data = {'key': api_key}
@@ -72,7 +72,7 @@ def subir_a_imgbb(archivo_temporal):
     except Exception as e:
         print(f"Error subiendo a ImgBB: {e}")
         return None
-    
+
 # ============================================
 # ANTI-CACHÉ
 # ============================================
@@ -492,17 +492,22 @@ def cliente_rm_html():
     return render_template('cliente/rm.html')
 
 # ============================================
-# API PÚBLICA CLASES (24h - DESDE HORA ACTUAL)
+# API PÚBLICA CLASES (24h - DESDE HOY 00:00 LOCAL)
 # ============================================
 @app.route('/api/clases', methods=['GET'])
 def api_obtener_clases():
     try:
         sheet = get_sheet("clases")
         registros = sheet.get_all_records()
-        ahora = datetime.now()
-        limite_24h = ahora + timedelta(hours=24)
+        
+        # Usar fecha actual en zona local
+        ahora_local = datetime.now()
+        inicio_hoy = datetime(ahora_local.year, ahora_local.month, ahora_local.day, 0, 0, 0)
+        limite_24h = inicio_hoy + timedelta(hours=24)
+        
         clases_disponibles = []
         ids_vistos = set()
+        
         for c in registros:
             clase_id = c.get('id')
             if clase_id in ids_vistos:
@@ -514,8 +519,7 @@ def api_obtener_clases():
                 continue
             try:
                 datetime_clase = datetime.strptime(f"{fecha_clase} {hora_clase}", "%Y-%m-%d %H:%M")
-                # Mostrar clases desde ahora hasta 24h después
-                if datetime_clase >= ahora and datetime_clase <= limite_24h:
+                if inicio_hoy <= datetime_clase <= limite_24h:
                     disponibles = int(c.get('cupos_maximos', 0)) - int(c.get('cupos_ocupados', 0))
                     if disponibles > 0:
                         clases_disponibles.append(c)
@@ -958,7 +962,6 @@ def cliente_subir_foto():
         return jsonify({"mensaje": "Foto actualizada", "url": url_publica})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-    
 
 # ============================================
 # API CLIENTE - RESERVAS
