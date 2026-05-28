@@ -669,6 +669,16 @@ function verImagenGrande(url) {
 }
 
 // ============================================
+// FUNCIÓN AUXILIAR PARA FECHAS LOCALES (sin UTC)
+// ============================================
+function formatearFechaLocal(fecha) {
+    const year = fecha.getFullYear();
+    const month = String(fecha.getMonth() + 1).padStart(2, '0');
+    const day = String(fecha.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+// ============================================
 // CLIENTES - ACORDEÓN CON BUSCADOR
 // ============================================
 let todosLosClientes = [];
@@ -938,10 +948,11 @@ function cargarDiasSemana() {
         fecha.setDate(hoy.getDate() + i);
         const nombreDia = obtenerNombreDia(fecha.getDay());
         const esHoy = (i === 0);
+        const fechaStr = formatearFechaLocal(fecha);
         dias.push({
             nombre: nombreDia,
             esHoy: esHoy,
-            fecha: fecha.toISOString().split('T')[0]
+            fecha: fechaStr
         });
     }
     
@@ -949,7 +960,7 @@ function cargarDiasSemana() {
     dias.forEach(d => {
         container.innerHTML += `
             <label>
-                <input type="checkbox" value="${d.nombre}"> ${d.nombre.charAt(0).toUpperCase() + d.nombre.slice(1)} ${d.esHoy ? '(hoy)' : ''}
+                <input type="checkbox" value="${d.nombre}" data-fecha="${d.fecha}"> ${d.nombre.charAt(0).toUpperCase() + d.nombre.slice(1)} ${d.esHoy ? '(hoy)' : ''}
             </label>
         `;
     });
@@ -994,7 +1005,10 @@ async function crearClasesMultiples() {
     
     const diasSeleccionados = [];
     document.querySelectorAll('#diasContainer input[type="checkbox"]:checked').forEach(cb => {
-        diasSeleccionados.push(cb.value);
+        diasSeleccionados.push({
+            nombre: cb.value,
+            fecha: cb.getAttribute('data-fecha')
+        });
     });
     
     if (diasSeleccionados.length === 0) {
@@ -1002,20 +1016,14 @@ async function crearClasesMultiples() {
         return;
     }
     
-    const hoy = new Date();
-    const fechas = [];
-    
-    for (let i = 0; i < 7; i++) {
-        let fecha = new Date(hoy);
-        fecha.setDate(hoy.getDate() + i);
-        const nombreDia = obtenerNombreDia(fecha.getDay());
-        if (diasSeleccionados.includes(nombreDia)) {
-            fechas.push(fecha.toISOString().split('T')[0]);
-        }
-    }
+    const fechas = diasSeleccionados.map(d => d.fecha);
     
     if (fechas.length === 0) {
         mostrarMensaje("No hay fechas en los días seleccionados", 'error');
+        return;
+    }
+    
+    if (!confirm(`¿Crear ${fechas.length} clase(s) para la próxima semana?`)) {
         return;
     }
     
@@ -1110,7 +1118,7 @@ async function eliminarClase(id) {
 }
 
 // ============================================
-// ANUNCIOS CON IMÁGENES
+// ANUNCIOS
 // ============================================
 async function cargarAnuncios() {
     const res = await fetch('/admin/anuncios');
