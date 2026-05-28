@@ -59,7 +59,7 @@ def validar_email(email):
 # ============================================
 def subir_a_imgbb(archivo_temporal):
     try:
-        api_key = "6d207e02198a847aa98d0a2a901485a5"
+        api_key = "8c339c9bb2209907600d7ef14ae56c12"
         with open(archivo_temporal, 'rb') as f:
             files = {'image': f}
             data = {'key': api_key}
