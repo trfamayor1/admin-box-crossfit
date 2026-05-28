@@ -583,7 +583,7 @@ def cliente_login_post():
     data = request.json
     email = data.get('email')
     
-    if not validar_email(email)):
+    if not validar_email(email):
         return jsonify({"error": "Email no válido"}), 400
     
     try:
