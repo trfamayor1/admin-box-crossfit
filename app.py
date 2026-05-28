@@ -945,7 +945,8 @@ def cliente_subir_foto():
         sheet = get_sheet("clientes")
         clientes = sheet.get_all_records()
         
-        fila_cliente = None        for i, c in enumerate(clientes, start=2):
+        fila_cliente = None
+        for i, c in enumerate(clientes, start=2):
             if c.get('email') == email:
                 fila_cliente = i
                 break
@@ -957,7 +958,8 @@ def cliente_subir_foto():
         return jsonify({"mensaje": "Foto actualizada", "url": url_publica})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
+    
+    
 # ============================================
 # API CLIENTE - RESERVAS
 # ============================================
