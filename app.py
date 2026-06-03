@@ -497,48 +497,42 @@ def cliente_rm_html():
 @app.route('/api/clases', methods=['GET'])
 def api_obtener_clases():
     try:
-        # Usar el mismo método que funciona en /test-clases
         sheet = get_sheet("clases")
         registros = sheet.get_all_records()
         
-        from datetime import date, timedelta
-        hoy = date.today()
-        manana = hoy + timedelta(days=1)
-        
-        print(f"📅 Hoy: {hoy}, Mañana: {manana}")
+        from datetime import datetime as dt
+        ahora = dt.now()
         
         clases_disponibles = []
+        ids_vistos = set()
         
         for c in registros:
-            fecha_clase = c.get('fecha', '')
-            print(f"🔍 Clase ID {c.get('id')}: fecha={fecha_clase}")
+            clase_id = c.get('id')
+            if clase_id in ids_vistos:
+                continue
+            ids_vistos.add(clase_id)
             
-            if not fecha_clase:
+            fecha_clase = c.get('fecha', '')
+            hora_clase = c.get('hora', '')
+            if not fecha_clase or not hora_clase:
                 continue
             
             try:
-                # Convertir la fecha de la clase a objeto date
-                fecha_obj = datetime.strptime(fecha_clase, "%Y-%m-%d").date()
-                print(f"   fecha_obj={fecha_obj}, es hoy? {fecha_obj == hoy}, es mañana? {fecha_obj == manana}")
+                # Combinar fecha y hora de la clase
+                datetime_clase = dt.strptime(f"{fecha_clase} {hora_clase}", "%Y-%m-%d %H:%M")
                 
-                # Mostrar solo clases de hoy o mañana
-                if fecha_obj == hoy or fecha_obj == manana:
+                # Solo mostrar clases que NO han pasado (fecha/hora >= ahora)
+                if datetime_clase >= ahora:
                     disponibles = int(c.get('cupos_maximos', 0)) - int(c.get('cupos_ocupados', 0))
                     if disponibles > 0:
                         clases_disponibles.append(c)
-                        print(f"   ✅ AGREGADA")
-                    else:
-                        print(f"   ❌ Sin cupos")
-                else:
-                    print(f"   ❌ Fuera de rango")
-            except Exception as e:
-                print(f"   ❌ Error: {e}")
+            except:
+                continue
         
-        print(f"📤 Devolviendo {len(clases_disponibles)} clases")
         return jsonify(clases_disponibles)
     except Exception as e:
-        print(f"❌ Error general: {e}")
         return jsonify({"error": str(e)}), 500
+    
     
 
     
