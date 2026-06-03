@@ -297,12 +297,13 @@ def admin_obtener_clases():
         sheet = get_sheet("clases")
         registros = sheet.get_all_records()
         
-        hoy = date.today().isoformat()
+        from datetime import date
+        hoy = date.today()
         
         clases_futuras = []
         for c in registros:
             fecha_clase = c.get('fecha', '')
-            if fecha_clase and fecha_clase >= hoy:
+            if fecha_clase and fecha_clase >= hoy.isoformat():
                 clases_futuras.append(c)
         
         clases_futuras.sort(key=lambda x: x.get('fecha', ''))
@@ -310,7 +311,8 @@ def admin_obtener_clases():
         return jsonify(clases_futuras)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
+    
+    
 @app.route('/admin/clases', methods=['POST'])
 def admin_crear_clase():
     try:
