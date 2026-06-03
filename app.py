@@ -297,14 +297,23 @@ def admin_obtener_clases():
         sheet = get_sheet("clases")
         registros = sheet.get_all_records()
         
-        from datetime import date
-        hoy = date.today()
+        from datetime import datetime as dt
+        ahora = dt.now()
         
         clases_futuras = []
         for c in registros:
             fecha_clase = c.get('fecha', '')
-            if fecha_clase and fecha_clase >= hoy.isoformat():
-                clases_futuras.append(c)
+            hora_clase = c.get('hora', '')
+            if not fecha_clase or not hora_clase:
+                continue
+            
+            try:
+                datetime_clase = dt.strptime(f"{fecha_clase} {hora_clase}", "%Y-%m-%d %H:%M")
+                # Solo mostrar clases que NO han pasado
+                if datetime_clase >= ahora:
+                    clases_futuras.append(c)
+            except:
+                continue
         
         clases_futuras.sort(key=lambda x: x.get('fecha', ''))
         
@@ -313,6 +322,7 @@ def admin_obtener_clases():
         return jsonify({"error": str(e)}), 500
     
     
+
 @app.route('/admin/clases', methods=['POST'])
 def admin_crear_clase():
     try:
