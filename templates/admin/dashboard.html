@@ -1118,10 +1118,15 @@ async function crearClasesMultiples() {
     for (const fecha of fechas) {
         for (const hora of horariosSeleccionados) {
             try {
+                // Enviar la hora exactamente como está seleccionada (sin conversión)
                 const res = await fetch('/admin/clases', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ fecha, hora, cupos_maximos: parseInt(cupos) })
+                    body: JSON.stringify({ 
+                        fecha: fecha, 
+                        hora: hora, 
+                        cupos_maximos: parseInt(cupos) 
+                    })
                 });
                 if (res.ok) {
                     creadas++;
@@ -1144,6 +1149,7 @@ async function crearClasesMultiples() {
         actualizarInfoHorarios();
     }
 }
+
 
 async function cargarClases() {
     const container = document.getElementById('clasesContainer');
