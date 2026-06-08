@@ -520,6 +520,7 @@ def api_obtener_clases():
         
         from datetime import datetime as dt
         ahora = dt.now()
+        limite_24h = ahora + timedelta(hours=24)
         
         clases_disponibles = []
         ids_vistos = set()
@@ -536,11 +537,9 @@ def api_obtener_clases():
                 continue
             
             try:
-                # Combinar fecha y hora de la clase
                 datetime_clase = dt.strptime(f"{fecha_clase} {hora_clase}", "%Y-%m-%d %H:%M")
-                
-                # Solo mostrar clases que NO han pasado (fecha/hora >= ahora)
-                if datetime_clase >= ahora:
+                # Solo mostrar clases desde ahora hasta 24 horas después
+                if datetime_clase >= ahora and datetime_clase <= limite_24h:
                     disponibles = int(c.get('cupos_maximos', 0)) - int(c.get('cupos_ocupados', 0))
                     if disponibles > 0:
                         clases_disponibles.append(c)
@@ -550,6 +549,7 @@ def api_obtener_clases():
         return jsonify(clases_disponibles)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+    
     
     
 
