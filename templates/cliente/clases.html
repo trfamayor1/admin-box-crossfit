@@ -261,7 +261,8 @@ async function cargarClases() {
     `;
     
     try {
-        const response = await fetch('/api/clases');
+        // 👇 ESTA ES LA LÍNEA MODIFICADA (agrega el email)
+        const response = await fetch(`/api/clases?email=${encodeURIComponent(clienteEmail)}`);
         
         if (!response.ok) {
             throw new Error('Error al cargar clases');
@@ -276,38 +277,14 @@ async function cargarClases() {
                 <div class="empty-state">
                     <i class="fas fa-calendar-times"></i>
                     <p style="font-size: 18px; margin-top: 16px;">No hay clases disponibles</p>
-                    <p style="font-size: 14px; margin-top: 8px;">Las clases se muestran desde ahora hasta mañana</p>
+                    <p style="font-size: 14px; margin-top: 8px;">Ya tienes una reserva activa o no hay clases en las próximas 24 horas</p>
                 </div>
             `;
             return;
         }
         
-        for (const clase of data) {
-            const disponibles = (clase.cupos_maximos || 0) - (clase.cupos_ocupados || 0);
-            const yaReservada = await verificarReserva(clase.id);
-            const estaLlena = disponibles <= 0;
-            
-            container.innerHTML += `
-                <div class="clase-card">
-                    <div class="clase-fecha">
-                        <i class="fas fa-calendar-day"></i> ${formatearFechaLegible(clase.fecha)}
-                    </div>
-                    <div class="clase-hora">
-                        <i class="fas fa-clock"></i> ${clase.hora || 'Sin hora'}
-                    </div>
-                    <div class="clase-cupos ${estaLlena ? 'lleno' : ''}">
-                        <i class="fas fa-users"></i> ${disponibles} cupo${disponibles !== 1 ? 's' : ''} disponible${disponibles !== 1 ? 's' : ''}
-                    </div>
-                    ${yaReservada ? 
-                        `<button class="btn-reservar reservado" disabled><i class="fas fa-check-circle"></i> ¡YA RESERVASTE!</button>` : 
-                        (estaLlena ? 
-                            `<button class="btn-reservar" disabled><i class="fas fa-ban"></i> SIN CUPOS</button>` : 
-                            `<button class="btn-reservar" onclick="reservarClase(${clase.id})"><i class="fas fa-calendar-plus"></i> RESERVAR</button>`
-                        )
-                    }
-                </div>
-            `;
-        }
+        // ... resto del código (for loop, etc.)
+        
     } catch (error) {
         console.error('Error:', error);
         container.innerHTML = `
@@ -319,7 +296,6 @@ async function cargarClases() {
         `;
     }
 }
-
 // ============================================
 // RESERVAR CLASE
 // ============================================

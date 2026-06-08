@@ -515,6 +515,9 @@ def cliente_rm_html():
 @app.route('/api/clases', methods=['GET'])
 def api_obtener_clases():
     try:
+        # Obtener email del cliente desde la URL
+        email = request.args.get('email')
+        
         sheet = get_sheet("clases")
         registros = sheet.get_all_records()
         
@@ -522,6 +525,47 @@ def api_obtener_clases():
         ahora = dt.now()
         limite_24h = ahora + timedelta(hours=24)
         
+        # ============================================
+        # VERIFICAR SI EL CLIENTE YA TIENE RESERVA ACTIVA
+        # ============================================
+        tiene_reserva_activa = False
+        if email:
+            try:
+                sheet_clientes = get_sheet("clientes")
+                clientes = sheet_clientes.get_all_records()
+                cliente_id = None
+                for c in clientes:
+                    if c.get('email') == email:
+                        cliente_id = c.get('id')
+                        break
+                
+                if cliente_id:
+                    sheet_reservas = get_sheet("reservas")
+                    reservas = sheet_reservas.get_all_records()
+                    sheet_clases_verificar = get_sheet("clases")
+                    clases_verificar = sheet_clases_verificar.get_all_records()
+                    hoy = date.today().isoformat()
+                    
+                    for r in reservas:
+                        if r.get('cliente_id') == cliente_id and r.get('estado') == 'confirmada':
+                            for c in clases_verificar:
+                                if c.get('id') == r.get('clase_id'):
+                                    fecha_clase = c.get('fecha', '')
+                                    if fecha_clase and fecha_clase >= hoy:
+                                        tiene_reserva_activa = True
+                                        break
+                            if tiene_reserva_activa:
+                                break
+            except Exception as e:
+                print(f"Error verificando reserva activa: {e}")
+        
+        # Si tiene reserva activa, devolver lista vacía
+        if tiene_reserva_activa:
+            return jsonify([])
+        
+        # ============================================
+        # FILTRAR CLASES DISPONIBLES (24h)
+        # ============================================
         clases_disponibles = []
         ids_vistos = set()
         
@@ -538,7 +582,6 @@ def api_obtener_clases():
             
             try:
                 datetime_clase = dt.strptime(f"{fecha_clase} {hora_clase}", "%Y-%m-%d %H:%M")
-                # Solo mostrar clases desde ahora hasta 24 horas después
                 if datetime_clase >= ahora and datetime_clase <= limite_24h:
                     disponibles = int(c.get('cupos_maximos', 0)) - int(c.get('cupos_ocupados', 0))
                     if disponibles > 0:
@@ -548,6 +591,7 @@ def api_obtener_clases():
         
         return jsonify(clases_disponibles)
     except Exception as e:
+        print(f"Error en api/clases: {e}")
         return jsonify({"error": str(e)}), 500
     
     
