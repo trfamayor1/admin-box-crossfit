@@ -9,10 +9,38 @@ import os
 import tempfile
 import re
 import requests
+import time
 from datetime import datetime, date, timedelta
 
 app = Flask(__name__)
 CORS(app)
+
+# ============================================
+# CACHÉ PARA REDUCIR PETICIONES A GOOGLE SHEETS
+# ============================================
+cache = {}
+CACHE_TTL = 15  # segundos (las consultas se guardan 15 segundos)
+
+def get_cached_data(key, fetch_function):
+    """Obtiene datos de la caché o los consulta si es necesario."""
+    if key in cache and (time.time() - cache[key]['time']) < CACHE_TTL:
+        print(f"⚡ Usando caché para: {key}")
+        return cache[key]['data']
+    
+    print(f"🐢 Consultando Google Sheets para: {key}")
+    data = fetch_function()
+    cache[key] = {'data': data, 'time': time.time()}
+    return data
+
+def invalidate_cache(key=None):
+    """Limpia toda la caché o una clave específica."""
+    global cache
+    if key:
+        cache.pop(key, None)
+        print(f"🗑️ Caché invalidada para: {key}")
+    else:
+        cache = {}
+        print(f"🗑️ Toda la caché ha sido limpiada")
 
 # ============================================
 # RATE LIMITING
@@ -23,26 +51,6 @@ limiter = Limiter(
     default_limits=["200 per day", "50 per hour"],
     storage_uri="memory://",
 )
-
-# ============================================
-# CACHÉ PARA REDUCIR PETICIONES A GOOGLE SHEETS
-# ============================================
-cache = {}
-CACHE_TTL = 30  # segundos
-
-def get_cached_sheet(nombre_hoja):
-    from time import time
-    key = nombre_hoja
-    now = time()
-    if key in cache and (now - cache[key]['time']) < CACHE_TTL:
-        return cache[key]['data']
-    data = get_sheet(nombre_hoja).get_all_records()
-    cache[key] = {'data': data, 'time': now}
-    return data
-
-def invalidate_cache(nombre_hoja):
-    if nombre_hoja in cache:
-        del cache[nombre_hoja]
 
 # ============================================
 # FUNCIONES AUXILIARES
@@ -74,7 +82,7 @@ def subir_a_imgbb(archivo_temporal):
         return None
 
 # ============================================
-# ANTI-CACHÉ
+# ANTI-CACHÉ DEL NAVEGADOR
 # ============================================
 @app.after_request
 def add_header(response):
@@ -162,7 +170,7 @@ def admin_cliente_perfil():
 # API ADMINISTRADOR
 # ============================================
 @app.route('/admin/verificar', methods=['POST'])
-@limiter.limit("50 per minute")
+@limiter.limit("10 per minute")
 def admin_verificar():
     data = request.json
     email = data.get('email')
@@ -223,7 +231,7 @@ def admin_crear_cliente():
             str(data.get('fecha_vencimiento', '')),
             str(data.get('activo', 'TRUE'))
         ])
-        invalidate_cache("clientes")
+        invalidate_cache()
         return jsonify({"mensaje": "Cliente creado", "id": nuevo_id})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -256,7 +264,7 @@ def admin_actualizar_cliente(cliente_id):
         sheet.update_cell(fila_index, 9, str(data.get('fecha_vencimiento', '')))
         sheet.update_cell(fila_index, 10, str(data.get('activo', 'TRUE')))
         
-        invalidate_cache("clientes")
+        invalidate_cache()
         return jsonify({"mensaje": "Cliente actualizado correctamente"})
     except Exception as e:
         print(f"Error: {e}")
@@ -271,7 +279,7 @@ def admin_eliminar_cliente(cliente_id):
         for i, r in enumerate(registros, start=2):
             if int(r.get('id')) == cliente_id:
                 sheet.delete_rows(i)
-                invalidate_cache("clientes")
+                invalidate_cache()
                 return jsonify({"mensaje": "Cliente eliminado"})
         return jsonify({"error": "No encontrado"}), 404
     except Exception as e:
@@ -293,35 +301,19 @@ def admin_obtener_membresias():
 # ============================================
 @app.route('/admin/clases', methods=['GET'])
 def admin_obtener_clases():
-    try:
+    def fetch_clases_admin():
         sheet = get_sheet("clases")
         registros = sheet.get_all_records()
-        
-        from datetime import datetime as dt
-        ahora = dt.now()
-        
+        hoy = date.today().isoformat()
         clases_futuras = []
         for c in registros:
             fecha_clase = c.get('fecha', '')
-            hora_clase = c.get('hora', '')
-            if not fecha_clase or not hora_clase:
-                continue
-            
-            try:
-                datetime_clase = dt.strptime(f"{fecha_clase} {hora_clase}", "%Y-%m-%d %H:%M")
-                # Solo mostrar clases que NO han pasado
-                if datetime_clase >= ahora:
-                    clases_futuras.append(c)
-            except:
-                continue
-        
+            if fecha_clase and fecha_clase >= hoy:
+                clases_futuras.append(c)
         clases_futuras.sort(key=lambda x: x.get('fecha', ''))
-        
-        return jsonify(clases_futuras)
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return clases_futuras
     
-    
+    return jsonify(get_cached_data("admin_clases", fetch_clases_admin))
 
 @app.route('/admin/clases', methods=['POST'])
 def admin_crear_clase():
@@ -330,20 +322,14 @@ def admin_crear_clase():
         sheet = get_sheet("clases")
         registros = sheet.get_all_records()
         nuevo_id = len(registros) + 1
-        
-        # Guardar la hora exactamente como viene (sin conversión)
-        fecha = data.get('fecha', '')
-        hora = data.get('hora', '')
-        cupos = data.get('cupos_maximos', 0)
-        
         sheet.append_row([
-            nuevo_id, fecha, hora, cupos, 0, 'admin'
+            nuevo_id, data.get('fecha', ''), data.get('hora', ''),
+            data.get('cupos_maximos', 0), 0, 'admin'
         ])
-        invalidate_cache("clases")
+        invalidate_cache()
         return jsonify({"mensaje": "Clase creada", "id": nuevo_id})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-    
 
 @app.route('/admin/clases/<int:clase_id>', methods=['DELETE'])
 def admin_eliminar_clase(clase_id):
@@ -353,7 +339,7 @@ def admin_eliminar_clase(clase_id):
         for i, r in enumerate(registros, start=2):
             if r.get('id') == clase_id:
                 sheet.delete_rows(i)
-                invalidate_cache("clases")
+                invalidate_cache()
                 return jsonify({"mensaje": "Clase eliminada"})
         return jsonify({"error": "No encontrada"}), 404
     except Exception as e:
@@ -364,12 +350,11 @@ def admin_eliminar_clase(clase_id):
 # ============================================
 @app.route('/admin/anuncios', methods=['GET'])
 def admin_obtener_anuncios():
-    try:
+    def fetch_anuncios():
         sheet = get_sheet("anuncios")
-        registros = sheet.get_all_records()
-        return jsonify(registros)
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return sheet.get_all_records()
+    
+    return jsonify(get_cached_data("admin_anuncios", fetch_anuncios))
 
 @app.route('/admin/anuncios', methods=['POST'])
 def admin_crear_anuncio():
@@ -388,7 +373,7 @@ def admin_crear_anuncio():
             fecha_actual,
             'TRUE'
         ])
-        invalidate_cache("anuncios")
+        invalidate_cache()
         return jsonify({"mensaje": "Anuncio creado", "id": nuevo_id})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -401,7 +386,7 @@ def admin_eliminar_anuncio(anuncio_id):
         for i, r in enumerate(registros, start=2):
             if r.get('id') == anuncio_id:
                 sheet.delete_rows(i)
-                invalidate_cache("anuncios")
+                invalidate_cache()
                 return jsonify({"mensaje": "Anuncio eliminado"})
         return jsonify({"error": "No encontrado"}), 404
     except Exception as e:
@@ -424,7 +409,7 @@ def admin_toggle_anuncio(anuncio_id):
         
         if fila_index:
             sheet.update_cell(fila_index, 6, vigente)
-            invalidate_cache("anuncios")
+            invalidate_cache()
             return jsonify({"mensaje": "Anuncio actualizado"})
         return jsonify({"error": "Anuncio no encontrado"}), 404
     except Exception as e:
@@ -510,14 +495,13 @@ def cliente_rm_html():
     return render_template('cliente/rm.html')
 
 # ============================================
-# API PÚBLICA CLASES (24h - DESDE HOY 00:00 LOCAL)
+# API PÚBLICA CLASES (24h - CON CACHÉ)
 # ============================================
 @app.route('/api/clases', methods=['GET'])
 def api_obtener_clases():
-    try:
-        # Obtener email del cliente desde la URL
-        email = request.args.get('email')
-        
+    email = request.args.get('email')
+    
+    def fetch_clases_disponibles():
         sheet = get_sheet("clases")
         registros = sheet.get_all_records()
         
@@ -525,47 +509,6 @@ def api_obtener_clases():
         ahora = dt.now()
         limite_24h = ahora + timedelta(hours=24)
         
-        # ============================================
-        # VERIFICAR SI EL CLIENTE YA TIENE RESERVA ACTIVA
-        # ============================================
-        tiene_reserva_activa = False
-        if email:
-            try:
-                sheet_clientes = get_sheet("clientes")
-                clientes = sheet_clientes.get_all_records()
-                cliente_id = None
-                for c in clientes:
-                    if c.get('email') == email:
-                        cliente_id = c.get('id')
-                        break
-                
-                if cliente_id:
-                    sheet_reservas = get_sheet("reservas")
-                    reservas = sheet_reservas.get_all_records()
-                    sheet_clases_verificar = get_sheet("clases")
-                    clases_verificar = sheet_clases_verificar.get_all_records()
-                    hoy = date.today().isoformat()
-                    
-                    for r in reservas:
-                        if r.get('cliente_id') == cliente_id and r.get('estado') == 'confirmada':
-                            for c in clases_verificar:
-                                if c.get('id') == r.get('clase_id'):
-                                    fecha_clase = c.get('fecha', '')
-                                    if fecha_clase and fecha_clase >= hoy:
-                                        tiene_reserva_activa = True
-                                        break
-                            if tiene_reserva_activa:
-                                break
-            except Exception as e:
-                print(f"Error verificando reserva activa: {e}")
-        
-        # Si tiene reserva activa, devolver lista vacía
-        if tiene_reserva_activa:
-            return jsonify([])
-        
-        # ============================================
-        # FILTRAR CLASES DISPONIBLES (24h)
-        # ============================================
         clases_disponibles = []
         ids_vistos = set()
         
@@ -588,28 +531,21 @@ def api_obtener_clases():
                         clases_disponibles.append(c)
             except:
                 continue
-        
-        return jsonify(clases_disponibles)
-    except Exception as e:
-        print(f"Error en api/clases: {e}")
-        return jsonify({"error": str(e)}), 500
+        return clases_disponibles
     
-    
-    
-
-    
+    cache_key = f"api_clases_{email}" if email else "api_clases_public"
+    return jsonify(get_cached_data(cache_key, fetch_clases_disponibles))
 
 # ============================================
 # API PÚBLICA HABILIDADES
 # ============================================
 @app.route('/api/habilidades', methods=['GET'])
 def api_obtener_habilidades():
-    try:
+    def fetch_habilidades():
         sheet = get_sheet("habilidades")
-        registros = sheet.get_all_records()
-        return jsonify(registros)
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return sheet.get_all_records()
+    
+    return jsonify(get_cached_data("habilidades", fetch_habilidades))
 
 # ============================================
 # API PÚBLICA RM
@@ -620,7 +556,7 @@ def api_obtener_rm():
     if not email:
         return jsonify([])
     
-    try:
+    def fetch_rm():
         sheet_clientes = get_sheet("clientes")
         clientes = sheet_clientes.get_all_records()
         cliente_id = None
@@ -630,7 +566,7 @@ def api_obtener_rm():
                 break
         
         if not cliente_id:
-            return jsonify([])
+            return []
         
         sheet_rm = get_sheet("rm_records")
         registros = sheet_rm.get_all_records()
@@ -644,15 +580,15 @@ def api_obtener_rm():
                     "peso_kg": r.get('peso_kg'),
                     "fecha_registro": r.get('fecha_registro')
                 })
-        return jsonify(resultado)
-    except Exception as e:
-        return jsonify([])
+        return resultado
+    
+    return jsonify(get_cached_data(f"rm_{email}", fetch_rm))
 
 # ============================================
 # API CLIENTE - LOGIN Y PERFIL
 # ============================================
 @app.route('/cliente/login', methods=['POST'])
-@limiter.limit("50 per minute")
+@limiter.limit("5 per minute")
 def cliente_login_post():
     data = request.json
     email = data.get('email')
@@ -668,7 +604,6 @@ def cliente_login_post():
                 if registro.get('activo') != 'TRUE':
                     return jsonify({"error": "Usuario inactivo"}), 401
                 
-                # Validar membresía vencida
                 fecha_vencimiento = registro.get('fecha_vencimiento', '')
                 if fecha_vencimiento:
                     try:
@@ -693,12 +628,13 @@ def cliente_obtener_perfil():
     email = data.get('email')
     if not email:
         return jsonify({"error": "Email requerido"}), 400
-    try:
+    
+    def fetch_perfil():
         sheet = get_sheet("clientes")
         registros = sheet.get_all_records()
         for registro in registros:
             if registro.get('email') == email:
-                return jsonify({
+                return {
                     "id": registro.get('id'),
                     "nombre": registro.get('nombre', ''),
                     "email": registro.get('email', ''),
@@ -709,10 +645,10 @@ def cliente_obtener_perfil():
                     "fecha_vencimiento": registro.get('fecha_vencimiento', ''),
                     "activo": registro.get('activo', 'TRUE'),
                     "foto_url": registro.get('foto_url', '')
-                })
-        return jsonify({"error": "Perfil no encontrado"}), 404
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+                }
+        return {"error": "Perfil no encontrado"}
+    
+    return jsonify(get_cached_data(f"perfil_{email}", fetch_perfil))
 
 @app.route('/cliente/logout', methods=['POST'])
 def cliente_logout():
@@ -723,14 +659,14 @@ def cliente_logout():
 # ============================================
 @app.route('/cliente/anuncios', methods=['GET'])
 def cliente_obtener_anuncios():
-    try:
+    def fetch_anuncios_cliente():
         sheet = get_sheet("anuncios")
         registros = sheet.get_all_records()
         vigentes = [a for a in registros if a.get('vigente') == 'TRUE']
         vigentes.sort(key=lambda x: x.get('fecha_publicacion', ''), reverse=True)
-        return jsonify(vigentes)
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return vigentes
+    
+    return jsonify(get_cached_data("cliente_anuncios", fetch_anuncios_cliente))
 
 # ============================================
 # API CLIENTE - RM (POST, PUT, DELETE)
@@ -762,6 +698,7 @@ def cliente_agregar_rm():
         sheet_rm.append_row([
             str(nuevo_id), str(cliente_id), str(habilidad_id), str(peso_kg), fecha_actual
         ])
+        invalidate_cache(f"rm_{email}")
         return jsonify({"mensaje": "RM guardado correctamente"})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -799,6 +736,7 @@ def cliente_actualizar_rm():
             sheet_rm.update(fila_index, [
                 str(rm_id), str(cliente_id), str(habilidad_id), str(peso_kg), datetime.now().strftime("%Y-%m-%d")
             ])
+            invalidate_cache(f"rm_{email}")
             return jsonify({"mensaje": "RM actualizado correctamente"})
         return jsonify({"error": "RM no encontrado"}), 404
     except Exception as e:
@@ -833,6 +771,7 @@ def cliente_eliminar_rm():
         
         if fila_index:
             sheet_rm.delete_rows(fila_index)
+            invalidate_cache(f"rm_{email}")
             return jsonify({"mensaje": "RM eliminado correctamente"})
         return jsonify({"error": "RM no encontrado"}), 404
     except Exception as e:
@@ -847,7 +786,7 @@ def cliente_ver_rm_publico():
     if not email:
         return jsonify([])
     
-    try:
+    def fetch_rm_publico():
         sheet_clientes = get_sheet("clientes")
         clientes = sheet_clientes.get_all_records()
         cliente_id = None
@@ -857,7 +796,7 @@ def cliente_ver_rm_publico():
                 break
         
         if not cliente_id:
-            return jsonify([])
+            return []
         
         sheet_habilidades = get_sheet("habilidades")
         habilidades = sheet_habilidades.get_all_records()
@@ -876,9 +815,9 @@ def cliente_ver_rm_publico():
                     "peso_kg": r.get('peso_kg'),
                     "fecha_registro": r.get('fecha_registro')
                 })
-        return jsonify(resultado)
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return resultado
+    
+    return jsonify(get_cached_data(f"rm_publico_{email}", fetch_rm_publico))
 
 # ============================================
 # API CLIENTE - OBTENER OTROS CLIENTES EN LA MISMA CLASE
@@ -889,7 +828,9 @@ def cliente_otros_reservas():
     email_actual = data.get('email')
     clase_id = data.get('clase_id')
     
-    try:
+    cache_key = f"otros_reservas_{email_actual}_{clase_id}"
+    
+    def fetch_otros():
         sheet_clientes = get_sheet("clientes")
         clientes = sheet_clientes.get_all_records()
         
@@ -900,7 +841,7 @@ def cliente_otros_reservas():
                 break
         
         if not cliente_actual_id:
-            return jsonify([])
+            return []
         
         sheet_reservas = get_sheet("reservas")
         reservas = sheet_reservas.get_all_records()
@@ -917,11 +858,9 @@ def cliente_otros_reservas():
                     "nombre": c.get('nombre', 'Cliente'),
                     "email": c.get('email', '')
                 })
-        
-        return jsonify(resultado)
-    except Exception as e:
-        print(f"Error en otros-reservas: {e}")
-        return jsonify([])
+        return resultado
+    
+    return jsonify(get_cached_data(cache_key, fetch_otros))
 
 # ============================================
 # API CLIENTE - DATOS PÚBLICOS DE OTRO CLIENTE
@@ -932,7 +871,7 @@ def cliente_datos_publicos():
     if not email:
         return jsonify({"error": "Email requerido"}), 400
     
-    try:
+    def fetch_datos_publicos():
         sheet_clientes = get_sheet("clientes")
         clientes = sheet_clientes.get_all_records()
         cliente_info = None
@@ -945,7 +884,7 @@ def cliente_datos_publicos():
                 break
         
         if not cliente_info:
-            return jsonify({"error": "Cliente no encontrado"}), 404
+            return {"error": "Cliente no encontrado"}
         
         sheet_habilidades = get_sheet("habilidades")
         habilidades = sheet_habilidades.get_all_records()
@@ -983,13 +922,12 @@ def cliente_datos_publicos():
                             "fecha_registro": r.get('fecha_registro')
                         })
         
-        return jsonify({
+        return {
             "nombre": cliente_info['nombre'],
             "rm": rm_lista
-        })
-    except Exception as e:
-        print(f"Error en datos-publicos: {e}")
-        return jsonify({"error": str(e)}), 500
+        }
+    
+    return jsonify(get_cached_data(f"datos_publicos_{email}", fetch_datos_publicos))
 
 # ============================================
 # API CLIENTE - SUBIR FOTO DE PERFIL
@@ -1027,14 +965,14 @@ def cliente_subir_foto():
         
         if fila_cliente:
             sheet.update_cell(fila_cliente, 6, url_publica)
-            invalidate_cache("clientes")
+            invalidate_cache(f"perfil_{email}")
         
         return jsonify({"mensaje": "Foto actualizada", "url": url_publica})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 # ============================================
-# API CLIENTE - RESERVAS
+# API CLIENTE - VERIFICAR RESERVA
 # ============================================
 @app.route('/cliente/verificar-reserva', methods=['POST'])
 def cliente_verificar_reserva():
@@ -1060,15 +998,17 @@ def cliente_verificar_reserva():
     except Exception as e:
         return jsonify({"reservado": False})
 
+# ============================================
+# API CLIENTE - RESERVAR
+# ============================================
 @app.route('/cliente/reservar', methods=['POST'])
-@limiter.limit("50 per minute")
+@limiter.limit("10 per minute")
 def cliente_reservar():
     data = request.json
     email = data.get('email')
     clase_id = data.get('clase_id')
     
     try:
-        # Obtener cliente
         sheet_clientes = get_sheet("clientes")
         clientes = sheet_clientes.get_all_records()
         cliente_id = None
@@ -1083,12 +1023,10 @@ def cliente_reservar():
         if not cliente_id:
             return jsonify({"error": "Cliente no encontrado"}), 404
         
-        # Verificar clases restantes
         clases_restantes = int(cliente_actual.get('clases_restantes_mes', 0)) if cliente_actual else 0
         if clases_restantes <= 0:
             return jsonify({"error": "No tienes clases disponibles"}), 400
         
-        # Obtener clase
         sheet_clases = get_sheet("clases")
         clases = sheet_clases.get_all_records()
         clase = None
@@ -1101,49 +1039,55 @@ def cliente_reservar():
         if not clase:
             return jsonify({"error": "Clase no encontrada"}), 404
         
-        # Verificar cupos
         disponibles = int(clase.get('cupos_maximos', 0)) - int(clase.get('cupos_ocupados', 0))
         if disponibles <= 0:
             return jsonify({"error": "No hay cupos"}), 400
         
-        # Verificar reserva activa (solo una)
         sheet_reservas = get_sheet("reservas")
         reservas = sheet_reservas.get_all_records()
         
         from datetime import date
         hoy = date.today().isoformat()
-        reservas_activas = 0
+        reservas_activas_futuras = 0
         for r in reservas:
             if r.get('cliente_id') == cliente_id and r.get('estado') == 'confirmada':
                 for c in clases:
                     if c.get('id') == r.get('clase_id'):
                         fecha_clase = c.get('fecha', '')
                         if fecha_clase and fecha_clase >= hoy:
-                            reservas_activas += 1
+                            reservas_activas_futuras += 1
                         break
         
-        if reservas_activas >= 1:
-            return jsonify({"error": "Ya tienes una reserva activa para una clase futura"}), 400
+        if reservas_activas_futuras >= 1:
+            return jsonify({"error": "Ya tienes una reserva activa para una clase futura. Cancélala primero para reservar otra."}), 400
         
-        # Crear reserva
+        fecha_clase_reservar = clase.get('fecha', '')
+        
+        for r in reservas:
+            if r.get('cliente_id') == cliente_id and r.get('estado') == 'confirmada':
+                sheet_clases_verificar = get_sheet("clases")
+                clases_verificar = sheet_clases_verificar.get_all_records()
+                for c in clases_verificar:
+                    if c.get('id') == r.get('clase_id') and c.get('fecha') == fecha_clase_reservar:
+                        return jsonify({"error": "Ya tienes reserva este día"}), 400
+        
+        for r in reservas:
+            if r.get('cliente_id') == cliente_id and r.get('clase_id') == clase_id:
+                return jsonify({"error": "Ya reservaste esta clase"}), 400
+        
         nueva_id = len(reservas) + 1
         fecha_reserva = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         sheet_reservas.append_row([
             str(nueva_id), str(cliente_id), str(clase_id), fecha_reserva, "confirmada"
         ])
         
-        # Actualizar cupos
         nuevo_cupo = int(clase.get('cupos_ocupados', 0)) + 1
         sheet_clases.update_cell(fila_clase, 5, nuevo_cupo)
         
-        # Descontar membresía
         nuevas_restantes = max(0, clases_restantes - 1)
         sheet_clientes.update_cell(fila_cliente, 8, nuevas_restantes)
         
-        # Limpiar caché
-        invalidate_cache("clases")
-        invalidate_cache("reservas")
-        invalidate_cache("clientes")
+        invalidate_cache()
         
         return jsonify({
             "mensaje": f"✅ Reserva confirmada. Te quedan {nuevas_restantes} clases."
@@ -1151,21 +1095,18 @@ def cliente_reservar():
     except Exception as e:
         print(f"Error en reservar: {e}")
         return jsonify({"error": str(e)}), 500
-    
 
+# ============================================
+# API CLIENTE - MIS RESERVAS (CON CACHÉ)
+# ============================================
 @app.route('/cliente/mis-reservas', methods=['POST'])
 def cliente_mis_reservas():
     data = request.json
     email = data.get('email')
     
-    # Verificar caché para evitar múltiples peticiones a Google Sheets
-    from time import time
     cache_key = f"mis_reservas_{email}"
-    if cache_key in cache and (time() - cache[cache_key]['time']) < 30:
-        print(f"📦 Usando caché para mis_reservas de {email}")
-        return jsonify(cache[cache_key]['data'])
     
-    try:
+    def fetch_mis_reservas():
         sheet_clientes = get_sheet("clientes")
         clientes = sheet_clientes.get_all_records()
         cliente_id = None
@@ -1174,14 +1115,13 @@ def cliente_mis_reservas():
                 cliente_id = c.get('id')
                 break
         if not cliente_id:
-            return jsonify([])
+            return []
         
         sheet_reservas = get_sheet("reservas")
         reservas = sheet_reservas.get_all_records()
         sheet_clases = get_sheet("clases")
         clases = sheet_clases.get_all_records()
         
-        from datetime import date
         hoy = date.today().isoformat()
         
         resultado = []
@@ -1198,18 +1138,15 @@ def cliente_mis_reservas():
                                 "hora": c.get('hora', '')
                             })
                         break
-        
-        # Guardar en caché
-        cache[cache_key] = {'data': resultado, 'time': time()}
-        
-        return jsonify(resultado)
-    except Exception as e:
-        print(f"Error en mis-reservas: {e}")
-        return jsonify([])
+        return resultado
     
+    return jsonify(get_cached_data(cache_key, fetch_mis_reservas))
 
+# ============================================
+# API CLIENTE - CANCELAR RESERVA
+# ============================================
 @app.route('/cliente/cancelar-reserva', methods=['POST'])
-@limiter.limit("50 per minute")
+@limiter.limit("10 per minute")
 def cliente_cancelar_reserva():
     data = request.json
     email = data.get('email')
@@ -1219,7 +1156,6 @@ def cliente_cancelar_reserva():
     try:
         sheet_clientes = get_sheet("clientes")
         clientes = sheet_clientes.get_all_records()
-        
         cliente_id = None
         fila_cliente = None
         cliente_actual = None
@@ -1262,16 +1198,12 @@ def cliente_cancelar_reserva():
             nuevas_restantes = clases_restantes_actual + 1
             sheet_clientes.update_cell(fila_cliente, 8, nuevas_restantes)
         
-        # 👇 LIMPIAR CACHÉ (importante)
-        invalidate_cache("clases")
-        invalidate_cache("reservas")
-        invalidate_cache("clientes")
+        invalidate_cache()
         
         return jsonify({"mensaje": f"✅ Reserva cancelada. Ahora tienes {nuevas_restantes} clases."})
     except Exception as e:
         print(f"Error en cancelar: {e}")
         return jsonify({"error": str(e)}), 500
-    
 
 # ============================================
 # MANIFEST Y SERVICE WORKER
@@ -1292,18 +1224,6 @@ def serve_manifest_admin():
 def serve_sw_admin():
     return send_from_directory('.', 'sw-admin.js')
 
-
-@app.route('/test-clases', methods=['GET'])
-def test_clases():
-    try:
-        sheet = get_sheet("clases")
-        registros = sheet.get_all_records()
-        return jsonify({
-            "total": len(registros),
-            "registros": registros
-        })
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
 # ============================================
 # INICIAR SERVIDOR
 # ============================================
