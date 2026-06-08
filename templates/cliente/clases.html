@@ -272,14 +272,10 @@ async function cargarClases() {
     const msg = document.getElementById('msg');
     
     // Mostrar esqueleto de carga
-    container.innerHTML = `
-        <div class="skeleton-card" style="height: 180px;"></div>
-        <div class="skeleton-card" style="height: 180px;"></div>
-        <div class="skeleton-card" style="height: 180px;"></div>
-    `;
+    container.innerHTML = `<div class="skeleton-card" style="height: 180px;"></div>`;
     
     try {
-        // Verificar si tiene reserva activa (en tiempo real)
+        // 1. Verificar si tiene reserva activa (una petición)
         const tieneReserva = await tieneReservaActiva();
         
         if (tieneReserva) {
@@ -293,19 +289,23 @@ async function cargarClases() {
             return;
         }
         
-        // Obtener clases disponibles (con timestamp para evitar caché)
+        // 2. Obtener clases disponibles (con timestamp para evitar caché)
         const timestamp = Date.now();
-        const response = await fetch(`/api/clases?email=${encodeURIComponent(clienteEmail)}&t=${timestamp}`);
+        const clasesResponse = await fetch(`/api/clases?email=${encodeURIComponent(clienteEmail)}&t=${timestamp}`);
+        const clases = await clasesResponse.json();
         
-        if (!response.ok) {
-            throw new Error('Error al cargar clases');
-        }
-        
-        const data = await response.json();
+        // 3. Obtener TODAS las reservas del cliente de una sola vez
+        const reservasResponse = await fetch('/cliente/mis-reservas', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: clienteEmail })
+        });
+        const reservas = await reservasResponse.json();
+        const clasesReservadas = new Set(reservas.map(r => r.clase_id));
         
         container.innerHTML = '';
         
-        if (!data || data.length === 0) {
+        if (!clases || clases.length === 0) {
             container.innerHTML = `
                 <div class="empty-state">
                     <i class="fas fa-calendar-times"></i>
@@ -316,9 +316,10 @@ async function cargarClases() {
             return;
         }
         
-        for (const clase of data) {
+        // 4. Mostrar clases (sin llamar verificarReserva por cada una)
+        for (const clase of clases) {
             const disponibles = (clase.cupos_maximos || 0) - (clase.cupos_ocupados || 0);
-            const yaReservada = await verificarReserva(clase.id);
+            const yaReservada = clasesReservadas.has(clase.id);
             const estaLlena = disponibles <= 0;
             
             container.innerHTML += `
@@ -353,6 +354,7 @@ async function cargarClases() {
         `;
     }
 }
+
 
 // ============================================
 // RESERVAR CLASE
