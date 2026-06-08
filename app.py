@@ -330,14 +330,20 @@ def admin_crear_clase():
         sheet = get_sheet("clases")
         registros = sheet.get_all_records()
         nuevo_id = len(registros) + 1
+        
+        # Guardar la hora exactamente como viene (sin conversión)
+        fecha = data.get('fecha', '')
+        hora = data.get('hora', '')
+        cupos = data.get('cupos_maximos', 0)
+        
         sheet.append_row([
-            nuevo_id, data.get('fecha', ''), data.get('hora', ''),
-            data.get('cupos_maximos', 0), 0, 'admin'
+            nuevo_id, fecha, hora, cupos, 0, 'admin'
         ])
         invalidate_cache("clases")
         return jsonify({"mensaje": "Clase creada", "id": nuevo_id})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+    
 
 @app.route('/admin/clases/<int:clase_id>', methods=['DELETE'])
 def admin_eliminar_clase(clase_id):
