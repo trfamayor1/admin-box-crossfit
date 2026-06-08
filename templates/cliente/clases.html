@@ -210,20 +210,6 @@ if (!clienteEmail) {
 // ============================================
 // FUNCIÓN PARA VERIFICAR SI TIENE RESERVA ACTIVA
 // ============================================
-async function tieneReservaActiva() {
-    try {
-        const response = await fetch('/cliente/mis-reservas', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: clienteEmail })
-        });
-        const reservas = await response.json();
-        return reservas.length > 0;
-    } catch (error) {
-        console.error('Error verificando reserva activa:', error);
-        return false;
-    }
-}
 
 // ============================================
 // FUNCIÓN PARA FORMATEAR FECHA EN ESPAÑOL
@@ -354,7 +340,93 @@ async function cargarClases() {
         `;
     }
 }
-
+async function cargarClases() {
+    const container = document.getElementById('clasesContainer');
+    const msg = document.getElementById('msg');
+    
+    container.innerHTML = `<div class="skeleton-card" style="height: 180px;"></div>`;
+    
+    try {
+        // 1. Obtener reservas UNA SOLA VEZ (para saber si tiene activa y qué clases)
+        const reservasResponse = await fetch('/cliente/mis-reservas', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: clienteEmail })
+        });
+        const reservas = await reservasResponse.json();
+        
+        // 2. Verificar si tiene reserva activa
+        const tieneReservaActiva = reservas.length > 0;
+        
+        if (tieneReservaActiva) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-clock"></i>
+                    <p style="font-size: 18px; margin-top: 16px;">Ya tienes una reserva activa</p>
+                    <p style="font-size: 14px; margin-top: 8px;">Cancela tu reserva actual en "Mis Reservas" para reservar otra clase.</p>
+                </div>
+            `;
+            return;
+        }
+        
+        // 3. Obtener clases disponibles
+        const timestamp = Date.now();
+        const clasesResponse = await fetch(`/api/clases?email=${encodeURIComponent(clienteEmail)}&t=${timestamp}`);
+        const clases = await clasesResponse.json();
+        
+        container.innerHTML = '';
+        
+        if (!clases || clases.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-calendar-times"></i>
+                    <p>No hay clases disponibles</p>
+                </div>
+            `;
+            return;
+        }
+        
+        // 4. Crear Set de clases reservadas (para saber qué clases ya reservó)
+        const clasesReservadas = new Set(reservas.map(r => r.clase_id));
+        
+        // 5. Mostrar clases
+        for (const clase of clases) {
+            const disponibles = (clase.cupos_maximos || 0) - (clase.cupos_ocupados || 0);
+            const yaReservada = clasesReservadas.has(clase.id);
+            const estaLlena = disponibles <= 0;
+            
+            container.innerHTML += `
+                <div class="clase-card">
+                    <div class="clase-fecha">
+                        <i class="fas fa-calendar-day"></i> ${formatearFechaLegible(clase.fecha)}
+                    </div>
+                    <div class="clase-hora">
+                        <i class="fas fa-clock"></i> ${clase.hora || 'Sin hora'}
+                    </div>
+                    <div class="clase-cupos ${estaLlena ? 'lleno' : ''}">
+                        <i class="fas fa-users"></i> ${disponibles} cupo${disponibles !== 1 ? 's' : ''} disponible${disponibles !== 1 ? 's' : ''}
+                    </div>
+                    ${yaReservada ? 
+                        `<button class="btn-reservar reservado" disabled><i class="fas fa-check-circle"></i> ¡YA RESERVASTE!</button>` : 
+                        (estaLlena ? 
+                            `<button class="btn-reservar" disabled><i class="fas fa-ban"></i> SIN CUPOS</button>` : 
+                            `<button class="btn-reservar" onclick="reservarClase(${clase.id})"><i class="fas fa-calendar-plus"></i> RESERVAR</button>`
+                        )
+                    }
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        container.innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-exclamation-triangle"></i>
+                <p>Error al cargar las clases</p>
+                <button onclick="cargarClases()" class="btn-agregar" style="margin-top: 16px;">Reintentar</button>
+            </div>
+        `;
+    }
+}
 
 // ============================================
 // RESERVAR CLASE
