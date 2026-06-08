@@ -1068,6 +1068,7 @@ def cliente_reservar():
     clase_id = data.get('clase_id')
     
     try:
+        # Obtener cliente
         sheet_clientes = get_sheet("clientes")
         clientes = sheet_clientes.get_all_records()
         cliente_id = None
@@ -1082,10 +1083,12 @@ def cliente_reservar():
         if not cliente_id:
             return jsonify({"error": "Cliente no encontrado"}), 404
         
+        # Verificar clases restantes
         clases_restantes = int(cliente_actual.get('clases_restantes_mes', 0)) if cliente_actual else 0
         if clases_restantes <= 0:
             return jsonify({"error": "No tienes clases disponibles"}), 400
         
+        # Obtener clase
         sheet_clases = get_sheet("clases")
         clases = sheet_clases.get_all_records()
         clase = None
@@ -1098,54 +1101,46 @@ def cliente_reservar():
         if not clase:
             return jsonify({"error": "Clase no encontrada"}), 404
         
+        # Verificar cupos
         disponibles = int(clase.get('cupos_maximos', 0)) - int(clase.get('cupos_ocupados', 0))
         if disponibles <= 0:
             return jsonify({"error": "No hay cupos"}), 400
         
+        # Verificar reserva activa (solo una)
         sheet_reservas = get_sheet("reservas")
         reservas = sheet_reservas.get_all_records()
         
         from datetime import date
         hoy = date.today().isoformat()
-        reservas_activas_futuras = 0
+        reservas_activas = 0
         for r in reservas:
             if r.get('cliente_id') == cliente_id and r.get('estado') == 'confirmada':
                 for c in clases:
                     if c.get('id') == r.get('clase_id'):
                         fecha_clase = c.get('fecha', '')
                         if fecha_clase and fecha_clase >= hoy:
-                            reservas_activas_futuras += 1
+                            reservas_activas += 1
                         break
         
-        if reservas_activas_futuras >= 1:
-            return jsonify({"error": "Ya tienes una reserva activa para una clase futura. Cancélala primero para reservar otra."}), 400
+        if reservas_activas >= 1:
+            return jsonify({"error": "Ya tienes una reserva activa para una clase futura"}), 400
         
-        fecha_clase_reservar = clase.get('fecha', '')
-        
-        for r in reservas:
-            if r.get('cliente_id') == cliente_id and r.get('estado') == 'confirmada':
-                sheet_clases_verificar = get_sheet("clases")
-                clases_verificar = sheet_clases_verificar.get_all_records()
-                for c in clases_verificar:
-                    if c.get('id') == r.get('clase_id') and c.get('fecha') == fecha_clase_reservar:
-                        return jsonify({"error": "Ya tienes reserva este día"}), 400
-        
-        for r in reservas:
-            if r.get('cliente_id') == cliente_id and r.get('clase_id') == clase_id:
-                return jsonify({"error": "Ya reservaste esta clase"}), 400
-        
+        # Crear reserva
         nueva_id = len(reservas) + 1
         fecha_reserva = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         sheet_reservas.append_row([
             str(nueva_id), str(cliente_id), str(clase_id), fecha_reserva, "confirmada"
         ])
         
+        # Actualizar cupos
         nuevo_cupo = int(clase.get('cupos_ocupados', 0)) + 1
         sheet_clases.update_cell(fila_clase, 5, nuevo_cupo)
         
+        # Descontar membresía
         nuevas_restantes = max(0, clases_restantes - 1)
         sheet_clientes.update_cell(fila_cliente, 8, nuevas_restantes)
         
+        # Limpiar caché
         invalidate_cache("clases")
         invalidate_cache("reservas")
         invalidate_cache("clientes")
@@ -1156,11 +1151,20 @@ def cliente_reservar():
     except Exception as e:
         print(f"Error en reservar: {e}")
         return jsonify({"error": str(e)}), 500
+    
 
 @app.route('/cliente/mis-reservas', methods=['POST'])
 def cliente_mis_reservas():
     data = request.json
     email = data.get('email')
+    
+    # Verificar caché para evitar múltiples peticiones a Google Sheets
+    from time import time
+    cache_key = f"mis_reservas_{email}"
+    if cache_key in cache and (time() - cache[cache_key]['time']) < 30:
+        print(f"📦 Usando caché para mis_reservas de {email}")
+        return jsonify(cache[cache_key]['data'])
+    
     try:
         sheet_clientes = get_sheet("clientes")
         clientes = sheet_clientes.get_all_records()
@@ -1177,6 +1181,7 @@ def cliente_mis_reservas():
         sheet_clases = get_sheet("clases")
         clases = sheet_clases.get_all_records()
         
+        from datetime import date
         hoy = date.today().isoformat()
         
         resultado = []
@@ -1193,10 +1198,15 @@ def cliente_mis_reservas():
                                 "hora": c.get('hora', '')
                             })
                         break
+        
+        # Guardar en caché
+        cache[cache_key] = {'data': resultado, 'time': time()}
+        
         return jsonify(resultado)
     except Exception as e:
         print(f"Error en mis-reservas: {e}")
         return jsonify([])
+    
 
 @app.route('/cliente/cancelar-reserva', methods=['POST'])
 @limiter.limit("50 per minute")

@@ -433,6 +433,14 @@ async function cargarClases() {
 // ============================================
 async function reservarClase(claseId) {
     const msg = document.getElementById('msg');
+    const btn = event.target;
+    
+    // Deshabilitar botón para evitar doble clic
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> Procesando...';
+    }
+    
     msg.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> Procesando reserva...';
     msg.className = '';
     
@@ -451,16 +459,21 @@ async function reservarClase(claseId) {
         if (response.ok) {
             msg.innerHTML = `<i class="fas fa-check-circle"></i> ${data.mensaje}`;
             msg.className = 'exito';
-            cargarClases();
-            setTimeout(() => { msg.innerHTML = ''; }, 3000);
+            
+            // No recargar todas las clases, solo redirigir a Mis Reservas
+            setTimeout(() => {
+                window.location.href = '/cliente/mis-reservas';
+            }, 1500);
         } else {
             msg.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${data.error || 'Error al reservar'}`;
             msg.className = 'error';
+            if (btn) btn.disabled = false;
         }
     } catch (error) {
         console.error('Error reservar:', error);
         msg.innerHTML = '<i class="fas fa-exclamation-circle"></i> Error de conexión';
         msg.className = 'error';
+        if (btn) btn.disabled = false;
     }
 }
 
