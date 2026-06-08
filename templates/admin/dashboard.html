@@ -306,45 +306,43 @@
             color: var(--bg-primary);
         }
         
-        .horarios-container {
+        .horarios-checkboxes {
             background: rgba(255, 255, 255, 0.03);
             padding: 15px;
             border-radius: var(--radius-md);
-            margin-bottom: 10px;
         }
         
-        .lista-horarios {
-            margin-top: 10px;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-        }
-        
-        .horario-tag {
-            background: var(--primary);
-            color: var(--bg-primary);
-            padding: 5px 12px;
-            border-radius: 20px;
-            font-size: 14px;
-            font-weight: 600;
+        .horario-checkbox {
             display: inline-flex;
             align-items: center;
             gap: 8px;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 8px 15px;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: all var(--transition-fast);
         }
         
-        .horario-tag button {
-            background: transparent;
-            color: var(--bg-primary);
-            border: none;
+        .horario-checkbox:hover {
+            background: rgba(240, 233, 29, 0.2);
+        }
+        
+        .horario-checkbox input {
+            width: 18px;
+            height: 18px;
             cursor: pointer;
-            font-size: 14px;
-            padding: 0;
+            accent-color: var(--primary);
             margin: 0;
         }
         
-        .horario-tag button:hover {
-            transform: none;
-            box-shadow: none;
+        .horario-checkbox span {
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .horario-checkbox:has(input:checked) {
+            background: var(--primary);
+            color: var(--bg-primary);
         }
         
         .btn-ver {
@@ -493,6 +491,10 @@
                 max-width: 60px;
                 max-height: 60px;
             }
+            .horarios-checkboxes {
+                max-height: 200px;
+                overflow-y: auto;
+            }
         }
     </style>
 </head>
@@ -562,17 +564,28 @@
             <button onclick="crearClase()" class="btn-agregar"><i class="fas fa-plus"></i> Crear Clase</button>
         </div>
         
-        <!-- Modo múltiple (días + múltiples horarios) -->
+        <!-- Modo múltiple (días + checkboxes de horarios) -->
         <div id="modoMultiple" style="display: none;">
             <div style="margin-bottom: 15px;">
-                <label style="display: block; margin-bottom: 8px; color: var(--text-secondary);">⏰ Horarios (puedes seleccionar varios):</label>
-                <div id="horariosContainer" class="horarios-container">
-                    <div class="input-group" style="margin-bottom: 10px;">
-                        <input type="time" class="hora_multiple" placeholder="Hora" style="flex: 1;">
-                        <button type="button" onclick="agregarHorario()" class="btn-agregar" style="padding: 8px 15px;"><i class="fas fa-plus"></i> Agregar horario</button>
-                    </div>
+                <label style="display: block; margin-bottom: 8px; color: var(--text-secondary);">⏰ Selecciona los horarios (puedes marcar varios):</label>
+                <div id="horariosCheckboxes" class="horarios-checkboxes">
+                    <label class="horario-checkbox"><input type="checkbox" value="06:00"> <span>06:00 AM</span></label>
+                    <label class="horario-checkbox"><input type="checkbox" value="07:00"> <span>07:00 AM</span></label>
+                    <label class="horario-checkbox"><input type="checkbox" value="08:00"> <span>08:00 AM</span></label>
+                    <label class="horario-checkbox"><input type="checkbox" value="09:00"> <span>09:00 AM</span></label>
+                    <label class="horario-checkbox"><input type="checkbox" value="10:00"> <span>10:00 AM</span></label>
+                    <label class="horario-checkbox"><input type="checkbox" value="11:00"> <span>11:00 AM</span></label>
+                    <label class="horario-checkbox"><input type="checkbox" value="12:00"> <span>12:00 PM</span></label>
+                    <label class="horario-checkbox"><input type="checkbox" value="13:00"> <span>01:00 PM</span></label>
+                    <label class="horario-checkbox"><input type="checkbox" value="14:00"> <span>02:00 PM</span></label>
+                    <label class="horario-checkbox"><input type="checkbox" value="15:00"> <span>03:00 PM</span></label>
+                    <label class="horario-checkbox"><input type="checkbox" value="16:00"> <span>04:00 PM</span></label>
+                    <label class="horario-checkbox"><input type="checkbox" value="17:00"> <span>05:00 PM</span></label>
+                    <label class="horario-checkbox"><input type="checkbox" value="18:00"> <span>06:00 PM</span></label>
+                    <label class="horario-checkbox"><input type="checkbox" value="19:00"> <span>07:00 PM</span></label>
+                    <label class="horario-checkbox"><input type="checkbox" value="20:00"> <span>08:00 PM</span></label>
                 </div>
-                <div id="listaHorarios" class="lista-horarios" style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px;"></div>
+                <div id="horariosSeleccionadosInfo" style="font-size: 12px; color: var(--text-disabled); margin-top: 5px;"></div>
             </div>
             
             <div class="input-group" style="margin-bottom: 15px;">
@@ -970,44 +983,16 @@ async function eliminarCliente(id) {
 // ============================================
 // CLASES - MODO SIMPLE Y MÚLTIPLE
 // ============================================
-let horariosSeleccionados = [];
-
-function agregarHorario() {
-    const input = document.querySelector('.hora_multiple');
-    const hora = input.value;
-    
-    if (!hora) {
-        mostrarMensaje("Selecciona una hora", 'error');
-        return;
+function actualizarInfoHorarios() {
+    const seleccionados = document.querySelectorAll('#horariosCheckboxes input[type="checkbox"]:checked').length;
+    const info = document.getElementById('horariosSeleccionadosInfo');
+    if (seleccionados > 0) {
+        info.innerHTML = `✅ ${seleccionados} horario(s) seleccionado(s)`;
+        info.style.color = '#10b981';
+    } else {
+        info.innerHTML = `📌 Selecciona los horarios que quieres programar`;
+        info.style.color = 'var(--text-disabled)';
     }
-    
-    if (horariosSeleccionados.includes(hora)) {
-        mostrarMensaje("Este horario ya fue agregado", 'error');
-        return;
-    }
-    
-    horariosSeleccionados.push(hora);
-    actualizarListaHorarios();
-    input.value = '';
-}
-
-function eliminarHorario(hora) {
-    horariosSeleccionados = horariosSeleccionados.filter(h => h !== hora);
-    actualizarListaHorarios();
-}
-
-function actualizarListaHorarios() {
-    const container = document.getElementById('listaHorarios');
-    container.innerHTML = '';
-    
-    horariosSeleccionados.forEach(hora => {
-        container.innerHTML += `
-            <div class="horario-tag">
-                ⏰ ${hora}
-                <button onclick="eliminarHorario('${hora}')"><i class="fas fa-times"></i></button>
-            </div>
-        `;
-    });
 }
 
 function toggleModoClase() {
@@ -1022,10 +1007,7 @@ function toggleModoClase() {
         modoSimple.style.display = 'none';
         modoMultiple.style.display = 'block';
         cargarDiasSemana();
-        // Limpiar horarios
-        horariosSeleccionados = [];
-        actualizarListaHorarios();
-        document.querySelector('.hora_multiple').value = '';
+        actualizarInfoHorarios();
     }
 }
 
@@ -1098,8 +1080,14 @@ async function crearClasesMultiples() {
         return;
     }
     
+    // Obtener horarios seleccionados de los checkboxes
+    const horariosSeleccionados = [];
+    document.querySelectorAll('#horariosCheckboxes input[type="checkbox"]:checked').forEach(cb => {
+        horariosSeleccionados.push(cb.value);
+    });
+    
     if (horariosSeleccionados.length === 0) {
-        mostrarMensaje("Agrega al menos un horario", 'error');
+        mostrarMensaje("Selecciona al menos un horario", 'error');
         return;
     }
     
@@ -1151,9 +1139,8 @@ async function crearClasesMultiples() {
         cargarClases();
         document.getElementById('clase_cupos_multiple').value = '';
         document.querySelectorAll('#diasContainer input[type="checkbox"]').forEach(cb => cb.checked = false);
-        horariosSeleccionados = [];
-        actualizarListaHorarios();
-        document.querySelector('.hora_multiple').value = '';
+        document.querySelectorAll('#horariosCheckboxes input[type="checkbox"]').forEach(cb => cb.checked = false);
+        actualizarInfoHorarios();
     }
 }
 
@@ -1360,6 +1347,10 @@ document.getElementById('buscadorClientes').onkeypress = function(e) {
         buscarClientes();
     }
 };
+
+document.querySelectorAll('#horariosCheckboxes input[type="checkbox"]').forEach(cb => {
+    cb.addEventListener('change', actualizarInfoHorarios);
+});
 
 verificarAdmin().then(() => {
     cargarMembresias();

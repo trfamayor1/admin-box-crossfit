@@ -155,14 +155,28 @@
             margin-right: 8px;
         }
         
+        /* Botón RESERVAR destacado */
+        .btn-resaltado {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: var(--bg-primary) !important;
+            font-weight: 800;
+            font-size: 1rem;
+            padding: 12px 24px;
+            border-radius: 40px;
+            box-shadow: 0 4px 15px rgba(240, 233, 29, 0.3);
+            transition: all 0.3s ease;
+        }
+        
+        .btn-resaltado:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 20px rgba(240, 233, 29, 0.5);
+            background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary) 100%);
+        }
+        
         @media (max-width: 768px) {
-            .rm-card {
-                flex-direction: column;
-                text-align: center;
-            }
-            .rm-actions {
-                width: 100%;
-                justify-content: center;
+            .btn-resaltado {
+                padding: 8px 16px;
+                font-size: 0.85rem;
             }
         }
     </style>
@@ -176,7 +190,7 @@
 
     <nav>
         <a href="/cliente/perfil"><i class="fas fa-user"></i> Mi Perfil</a>
-        <a href="/cliente/clases"><i class="fas fa-calendar-alt"></i> RESERVAR</a>
+        <a href="/cliente/clases" class="btn-resaltado"><i class="fas fa-calendar-alt"></i> RESERVAR</a>
         <a href="/cliente/mis-reservas"><i class="fas fa-bookmark"></i> Mis Reservas</a>
         <a href="/cliente/rm"><i class="fas fa-chart-simple"></i> Mis RM</a>
     </nav>
