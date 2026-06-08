@@ -1209,6 +1209,7 @@ def cliente_cancelar_reserva():
     try:
         sheet_clientes = get_sheet("clientes")
         clientes = sheet_clientes.get_all_records()
+        
         cliente_id = None
         fila_cliente = None
         cliente_actual = None
@@ -1251,6 +1252,7 @@ def cliente_cancelar_reserva():
             nuevas_restantes = clases_restantes_actual + 1
             sheet_clientes.update_cell(fila_cliente, 8, nuevas_restantes)
         
+        # 👇 LIMPIAR CACHÉ (importante)
         invalidate_cache("clases")
         invalidate_cache("reservas")
         invalidate_cache("clientes")
@@ -1259,6 +1261,7 @@ def cliente_cancelar_reserva():
     except Exception as e:
         print(f"Error en cancelar: {e}")
         return jsonify({"error": str(e)}), 500
+    
 
 # ============================================
 # MANIFEST Y SERVICE WORKER
