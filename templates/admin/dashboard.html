@@ -306,6 +306,47 @@
             color: var(--bg-primary);
         }
         
+        .horarios-container {
+            background: rgba(255, 255, 255, 0.03);
+            padding: 15px;
+            border-radius: var(--radius-md);
+            margin-bottom: 10px;
+        }
+        
+        .lista-horarios {
+            margin-top: 10px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .horario-tag {
+            background: var(--primary);
+            color: var(--bg-primary);
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .horario-tag button {
+            background: transparent;
+            color: var(--bg-primary);
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .horario-tag button:hover {
+            transform: none;
+            box-shadow: none;
+        }
+        
         .btn-ver {
             background: transparent;
             border: 1px solid var(--primary);
@@ -521,12 +562,23 @@
             <button onclick="crearClase()" class="btn-agregar"><i class="fas fa-plus"></i> Crear Clase</button>
         </div>
         
-        <!-- Modo múltiple (próximos 7 días) -->
+        <!-- Modo múltiple (días + múltiples horarios) -->
         <div id="modoMultiple" style="display: none;">
-            <div class="input-group" style="margin-bottom: 15px;">
-                <input type="time" id="clase_hora_multiple" placeholder="Hora">
-                <input type="number" id="clase_cupos_multiple" placeholder="Cupos" style="width:100px">
+            <div style="margin-bottom: 15px;">
+                <label style="display: block; margin-bottom: 8px; color: var(--text-secondary);">⏰ Horarios (puedes seleccionar varios):</label>
+                <div id="horariosContainer" class="horarios-container">
+                    <div class="input-group" style="margin-bottom: 10px;">
+                        <input type="time" class="hora_multiple" placeholder="Hora" style="flex: 1;">
+                        <button type="button" onclick="agregarHorario()" class="btn-agregar" style="padding: 8px 15px;"><i class="fas fa-plus"></i> Agregar horario</button>
+                    </div>
+                </div>
+                <div id="listaHorarios" class="lista-horarios" style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px;"></div>
             </div>
+            
+            <div class="input-group" style="margin-bottom: 15px;">
+                <input type="number" id="clase_cupos_multiple" placeholder="Cupos por clase" style="width: 100px;">
+            </div>
+            
             <div style="margin: 15px 0;">
                 <p style="margin-bottom: 10px; color: var(--text-secondary);">📅 Selecciona los días para programar (próximos 7 días):</p>
                 <div class="dias-semana" id="diasContainer"></div>
@@ -918,6 +970,46 @@ async function eliminarCliente(id) {
 // ============================================
 // CLASES - MODO SIMPLE Y MÚLTIPLE
 // ============================================
+let horariosSeleccionados = [];
+
+function agregarHorario() {
+    const input = document.querySelector('.hora_multiple');
+    const hora = input.value;
+    
+    if (!hora) {
+        mostrarMensaje("Selecciona una hora", 'error');
+        return;
+    }
+    
+    if (horariosSeleccionados.includes(hora)) {
+        mostrarMensaje("Este horario ya fue agregado", 'error');
+        return;
+    }
+    
+    horariosSeleccionados.push(hora);
+    actualizarListaHorarios();
+    input.value = '';
+}
+
+function eliminarHorario(hora) {
+    horariosSeleccionados = horariosSeleccionados.filter(h => h !== hora);
+    actualizarListaHorarios();
+}
+
+function actualizarListaHorarios() {
+    const container = document.getElementById('listaHorarios');
+    container.innerHTML = '';
+    
+    horariosSeleccionados.forEach(hora => {
+        container.innerHTML += `
+            <div class="horario-tag">
+                ⏰ ${hora}
+                <button onclick="eliminarHorario('${hora}')"><i class="fas fa-times"></i></button>
+            </div>
+        `;
+    });
+}
+
 function toggleModoClase() {
     const modo = document.querySelector('input[name="tipoClase"]:checked').value;
     const modoSimple = document.getElementById('modoSimple');
@@ -930,6 +1022,10 @@ function toggleModoClase() {
         modoSimple.style.display = 'none';
         modoMultiple.style.display = 'block';
         cargarDiasSemana();
+        // Limpiar horarios
+        horariosSeleccionados = [];
+        actualizarListaHorarios();
+        document.querySelector('.hora_multiple').value = '';
     }
 }
 
@@ -995,11 +1091,15 @@ async function crearClase() {
 }
 
 async function crearClasesMultiples() {
-    const hora = document.getElementById('clase_hora_multiple').value;
     const cupos = document.getElementById('clase_cupos_multiple').value;
     
-    if (!hora || !cupos) {
-        mostrarMensaje("Completa hora y cupos", 'error');
+    if (!cupos) {
+        mostrarMensaje("Completa los cupos", 'error');
+        return;
+    }
+    
+    if (horariosSeleccionados.length === 0) {
+        mostrarMensaje("Agrega al menos un horario", 'error');
         return;
     }
     
@@ -1017,13 +1117,9 @@ async function crearClasesMultiples() {
     }
     
     const fechas = diasSeleccionados.map(d => d.fecha);
+    const totalClases = fechas.length * horariosSeleccionados.length;
     
-    if (fechas.length === 0) {
-        mostrarMensaje("No hay fechas en los días seleccionados", 'error');
-        return;
-    }
-    
-    if (!confirm(`¿Crear ${fechas.length} clase(s) para la próxima semana?`)) {
+    if (!confirm(`¿Crear ${totalClases} clase(s) (${fechas.length} día(s) × ${horariosSeleccionados.length} horario(s))?`)) {
         return;
     }
     
@@ -1031,19 +1127,21 @@ async function crearClasesMultiples() {
     let errores = 0;
     
     for (const fecha of fechas) {
-        try {
-            const res = await fetch('/admin/clases', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ fecha, hora, cupos_maximos: parseInt(cupos) })
-            });
-            if (res.ok) {
-                creadas++;
-            } else {
+        for (const hora of horariosSeleccionados) {
+            try {
+                const res = await fetch('/admin/clases', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ fecha, hora, cupos_maximos: parseInt(cupos) })
+                });
+                if (res.ok) {
+                    creadas++;
+                } else {
+                    errores++;
+                }
+            } catch (error) {
                 errores++;
             }
-        } catch (error) {
-            errores++;
         }
     }
     
@@ -1051,9 +1149,11 @@ async function crearClasesMultiples() {
     
     if (creadas > 0) {
         cargarClases();
-        document.getElementById('clase_hora_multiple').value = '';
         document.getElementById('clase_cupos_multiple').value = '';
         document.querySelectorAll('#diasContainer input[type="checkbox"]').forEach(cb => cb.checked = false);
+        horariosSeleccionados = [];
+        actualizarListaHorarios();
+        document.querySelector('.hora_multiple').value = '';
     }
 }
 

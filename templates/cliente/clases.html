@@ -15,18 +15,36 @@
     
     <style>
         .clase-card {
-            background: var(--bg-card);
+            background: linear-gradient(135deg, var(--bg-card) 0%, rgba(18, 17, 24, 0.98) 100%);
             border-radius: var(--radius-lg);
-            padding: 20px;
-            margin-bottom: 16px;
-            border: 1px solid var(--border-color);
+            padding: 24px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(240, 233, 29, 0.15);
+            transition: all var(--transition-normal);
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+        }
+        
+        .clase-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: var(--primary);
             transition: all var(--transition-normal);
         }
         
         .clase-card:hover {
-            transform: translateY(-2px);
+            transform: translateY(-4px);
             border-color: var(--border-glow);
             box-shadow: var(--shadow-glow);
+        }
+        
+        .clase-card:hover::before {
+            width: 8px;
         }
         
         .clase-fecha {
@@ -37,57 +55,81 @@
             display: flex;
             align-items: center;
             gap: 8px;
+            letter-spacing: 0.5px;
         }
         
         .clase-hora {
-            font-size: 24px;
-            font-weight: 700;
-            margin-bottom: 8px;
+            font-size: 32px;
+            font-weight: 800;
+            margin-bottom: 12px;
             color: var(--text-primary);
+            letter-spacing: -1px;
         }
         
         .clase-cupos {
             display: inline-block;
-            background: rgba(16, 185, 129, 0.2);
+            background: rgba(16, 185, 129, 0.15);
             color: #10b981;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 500;
-            margin-bottom: 16px;
+            padding: 6px 14px;
+            border-radius: 30px;
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            backdrop-filter: blur(4px);
         }
         
         .clase-cupos.lleno {
-            background: rgba(220, 38, 38, 0.2);
+            background: rgba(220, 38, 38, 0.15);
             color: #dc2626;
         }
         
         .btn-reservar {
             width: 100%;
-            background: var(--primary);
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
             color: var(--bg-primary);
             border: none;
-            padding: 14px;
+            padding: 16px;
             border-radius: var(--radius-md);
-            font-weight: 700;
+            font-weight: 800;
+            font-size: 16px;
             cursor: pointer;
             transition: all var(--transition-normal);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
         }
         
         .btn-reservar:hover {
             transform: scale(1.02);
             box-shadow: var(--shadow-glow);
+            background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary) 100%);
         }
         
         .btn-reservar:disabled {
             background: var(--text-disabled);
             cursor: not-allowed;
             transform: none;
+            box-shadow: none;
         }
         
         .btn-reservar.reservado {
-            background: #10b981;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
             color: white;
+        }
+        
+        .skeleton-card {
+            background: linear-gradient(90deg, var(--bg-card) 25%, rgba(255,255,255,0.05) 50%, var(--bg-card) 75%);
+            background-size: 200% 100%;
+            animation: skeleton-loading 1.5s infinite;
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            margin-bottom: 20px;
+        }
+        
+        @keyframes skeleton-loading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
         }
         
         .loading-spinner {
@@ -98,12 +140,12 @@
         
         .empty-state {
             text-align: center;
-            padding: 40px;
+            padding: 60px 40px;
             color: var(--text-secondary);
         }
         
         .empty-state i {
-            font-size: 48px;
+            font-size: 64px;
             color: var(--primary);
             margin-bottom: 16px;
         }
@@ -140,68 +182,28 @@ if (!clienteEmail) {
     window.location.href = '/cliente/login';
 }
 
-async function cargarClases() {
-    const container = document.getElementById('clasesContainer');
-    const msg = document.getElementById('msg');
+// ============================================
+// FUNCIÓN PARA FORMATEAR FECHA EN ESPAÑOL
+// ============================================
+function formatearFechaLegible(fechaStr) {
+    if (!fechaStr) return 'Sin fecha';
+    const [year, month, day] = fechaStr.split('-');
+    const fecha = new Date(year, month - 1, day);
+    const hoy = new Date();
+    const manana = new Date(hoy);
+    manana.setDate(hoy.getDate() + 1);
     
-    try {
-        const response = await fetch('/api/clases');
-        
-        if (!response.ok) {
-            throw new Error('Error al cargar clases');
-        }
-        
-        const data = await response.json();
-        
-        container.innerHTML = '';
-        
-        if (!data || data.length === 0) {
-            container.innerHTML = `
-                <div class="empty-state">
-                    <i class="fas fa-calendar-times"></i>
-                    <p>No hay clases disponibles en las próximas 24 horas</p>
-                </div>
-            `;
-            return;
-        }
-        
-        for (const clase of data) {
-            const disponibles = (clase.cupos_maximos || 0) - (clase.cupos_ocupados || 0);
-            const yaReservada = await verificarReserva(clase.id);
-            const estaLlena = disponibles <= 0;
-            
-            container.innerHTML += `
-                <div class="clase-card">
-                    <div class="clase-fecha">
-                        <i class="fas fa-calendar-day"></i> ${clase.fecha || 'Sin fecha'}
-                    </div>
-                    <div class="clase-hora">
-                        <i class="fas fa-clock"></i> ${clase.hora || 'Sin hora'}
-                    </div>
-                    <div class="clase-cupos ${estaLlena ? 'lleno' : ''}">
-                        <i class="fas fa-users"></i> ${disponibles} cupos disponibles
-                    </div>
-                    ${yaReservada ? 
-                        `<button class="btn-reservar reservado" disabled><i class="fas fa-check-circle"></i> Ya reservaste</button>` : 
-                        (estaLlena ? 
-                            `<button class="btn-reservar" disabled><i class="fas fa-ban"></i> Sin cupos</button>` : 
-                            `<button class="btn-reservar" onclick="reservarClase(${clase.id})"><i class="fas fa-calendar-plus"></i> Reservar</button>`
-                        )
-                    }
-                </div>
-            `;
-        }
-    } catch (error) {
-        console.error('Error:', error);
-        container.innerHTML = `
-            <div class="empty-state">
-                <i class="fas fa-exclamation-triangle"></i>
-                <p>Error al cargar las clases. Intenta de nuevo.</p>
-            </div>
-        `;
+    if (fecha.toDateString() === hoy.toDateString()) {
+        return 'HOY';
+    } else if (fecha.toDateString() === manana.toDateString()) {
+        return 'MAÑANA';
     }
+    return fecha.toLocaleDateString('es-ES', { day: 'numeric', month: 'long' });
 }
 
+// ============================================
+// VERIFICAR RESERVA
+// ============================================
 async function verificarReserva(claseId) {
     try {
         const response = await fetch('/cliente/verificar-reserva', {
@@ -219,6 +221,83 @@ async function verificarReserva(claseId) {
     }
 }
 
+// ============================================
+// CARGAR CLASES
+// ============================================
+async function cargarClases() {
+    const container = document.getElementById('clasesContainer');
+    const msg = document.getElementById('msg');
+    
+    // Mostrar esqueleto de carga
+    container.innerHTML = `
+        <div class="skeleton-card" style="height: 180px;"></div>
+        <div class="skeleton-card" style="height: 180px;"></div>
+        <div class="skeleton-card" style="height: 180px;"></div>
+    `;
+    
+    try {
+        const response = await fetch('/api/clases');
+        
+        if (!response.ok) {
+            throw new Error('Error al cargar clases');
+        }
+        
+        const data = await response.json();
+        
+        container.innerHTML = '';
+        
+        if (!data || data.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-calendar-times"></i>
+                    <p style="font-size: 18px; margin-top: 16px;">No hay clases disponibles</p>
+                    <p style="font-size: 14px; margin-top: 8px;">Las clases se muestran desde ahora hasta mañana</p>
+                </div>
+            `;
+            return;
+        }
+        
+        for (const clase of data) {
+            const disponibles = (clase.cupos_maximos || 0) - (clase.cupos_ocupados || 0);
+            const yaReservada = await verificarReserva(clase.id);
+            const estaLlena = disponibles <= 0;
+            
+            container.innerHTML += `
+                <div class="clase-card">
+                    <div class="clase-fecha">
+                        <i class="fas fa-calendar-day"></i> ${formatearFechaLegible(clase.fecha)}
+                    </div>
+                    <div class="clase-hora">
+                        <i class="fas fa-clock"></i> ${clase.hora || 'Sin hora'}
+                    </div>
+                    <div class="clase-cupos ${estaLlena ? 'lleno' : ''}">
+                        <i class="fas fa-users"></i> ${disponibles} cupo${disponibles !== 1 ? 's' : ''} disponible${disponibles !== 1 ? 's' : ''}
+                    </div>
+                    ${yaReservada ? 
+                        `<button class="btn-reservar reservado" disabled><i class="fas fa-check-circle"></i> ¡YA RESERVASTE!</button>` : 
+                        (estaLlena ? 
+                            `<button class="btn-reservar" disabled><i class="fas fa-ban"></i> SIN CUPOS</button>` : 
+                            `<button class="btn-reservar" onclick="reservarClase(${clase.id})"><i class="fas fa-calendar-plus"></i> RESERVAR</button>`
+                        )
+                    }
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        container.innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-exclamation-triangle"></i>
+                <p>Error al cargar las clases</p>
+                <button onclick="cargarClases()" class="btn-agregar" style="margin-top: 16px;">Reintentar</button>
+            </div>
+        `;
+    }
+}
+
+// ============================================
+// RESERVAR CLASE
+// ============================================
 async function reservarClase(claseId) {
     const msg = document.getElementById('msg');
     msg.innerHTML = '<i class="fas fa-spinner fa-pulse"></i> Procesando reserva...';
@@ -252,11 +331,17 @@ async function reservarClase(claseId) {
     }
 }
 
+// ============================================
+// CERRAR SESIÓN
+// ============================================
 function cerrarSesion() {
     localStorage.removeItem('cliente_email');
     window.location.href = '/cliente/login';
 }
 
+// ============================================
+// INICIALIZAR
+// ============================================
 cargarClases();
 </script>
 </body>
