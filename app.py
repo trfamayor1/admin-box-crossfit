@@ -162,7 +162,7 @@ def admin_cliente_perfil():
 # API ADMINISTRADOR
 # ============================================
 @app.route('/admin/verificar', methods=['POST'])
-@limiter.limit("10 per minute")
+@limiter.limit("50 per minute")
 def admin_verificar():
     data = request.json
     email = data.get('email')
@@ -602,7 +602,7 @@ def api_obtener_rm():
 # API CLIENTE - LOGIN Y PERFIL
 # ============================================
 @app.route('/cliente/login', methods=['POST'])
-@limiter.limit("5 per minute")
+@limiter.limit("50 per minute")
 def cliente_login_post():
     data = request.json
     email = data.get('email')
@@ -1011,7 +1011,7 @@ def cliente_verificar_reserva():
         return jsonify({"reservado": False})
 
 @app.route('/cliente/reservar', methods=['POST'])
-@limiter.limit("5 per minute")
+@limiter.limit("50 per minute")
 def cliente_reservar():
     data = request.json
     email = data.get('email')
@@ -1149,7 +1149,7 @@ def cliente_mis_reservas():
         return jsonify([])
 
 @app.route('/cliente/cancelar-reserva', methods=['POST'])
-@limiter.limit("5 per minute")
+@limiter.limit("50 per minute")
 def cliente_cancelar_reserva():
     data = request.json
     email = data.get('email')
